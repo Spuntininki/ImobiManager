@@ -2,6 +2,13 @@
   "name": "imobimanager",
   "version": "0.0.1",
   "description": "ImobiManager - Real estate rental management system",
+  "bugs": {
+    "url": "https://github.com/Spuntininki/ImobiManager/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Spuntininki/ImobiManager.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
