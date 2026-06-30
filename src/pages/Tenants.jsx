@@ -1,6 +1,6 @@
 export function Tenants() {
   return (
-    <div className="container py-8">
+    <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-6">
       <h1 className="text-3xl font-bold tracking-tight">Inquilinos</h1>
       <p className="mt-2 text-muted-foreground">
         Cadastre e gerencie os moradores dos seus imóveis.
