@@ -1,4 +1,18 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
 .env
 .env.local
+frontend/.env
+frontend/.env.local
+backend/.env
+backend/.env.local
+
+# Backend
+backend/.venv
+backend/__pycache__
+backend/**/*.pyc

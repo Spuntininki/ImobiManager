@@ -29,7 +29,10 @@ ImobiManager is a real estate rental management system. The owner (landlord) log
 
 ## Folder Structure
 
-- `src/components/ui/` — shadcn/ui components.
-- `src/components/layout/` — layout components.
-- `src/pages/` — page components.
-- `src/lib/` — utility functions.
+- `frontend/` — React/Vite frontend application.
+  - `frontend/src/components/ui/` — shadcn/ui components.
+  - `frontend/src/components/layout/` — layout components.
+  - `frontend/src/pages/` — page components.
+  - `frontend/src/lib/` — utility functions.
+- `backend/` — FastAPI backend application (future).
+  - `backend/db/schema.dbml` — PostgreSQL database schema in DBML format.
