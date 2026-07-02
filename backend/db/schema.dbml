@@ -1,3 +1,115 @@
 // ImobiManager database schema
 // PostgreSQL schema defined in DBML format.
 // https://dbml.dbdiagram.io/docs
+
+Table users {
+  id int [primary key]
+  email varchar [unique, note: 'Login credential. One user can manage multiple owners.']
+  name varchar [note: 'Display name of the logged-in user.']
+  password varchar [note: 'Hashed authentication password.']
+  created_at timestamp
+}
+
+Table owners {
+  id int [primary key]
+  name varchar [note: 'Legal or business name of the property owner.']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table user_owners {
+  id int [primary key]
+  user_id int [ref: > users.id, note: 'User allowed to manage the linked owner.']
+  owner_id int [ref: > owners.id, note: 'Owner managed by the linked user.']
+}
+
+Table renters {
+  id int [primary key]
+  name varchar [note: 'Full name of the tenant.']
+  primary_contact varchar [note: 'Main phone number.']
+  secondary_contact varchar [note: 'Alternative phone number.']
+  e_mail varchar [note: 'Tenant email address.']
+  created_at timestamp
+  updated_at timestamp
+}
+
+enum document_types {
+  RG
+  CPF
+  CNPJ
+}
+
+Table owner_documents {
+  id int [primary key]
+  owner_id int [ref: > owners.id]
+  document varchar [note: 'Document number without formatting.']
+  document_type document_types [not null, note: 'Type of document (RG, CPF or CNPJ).']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table renter_documents {
+  id int [primary key]
+  renter_id int [ref: > renters.id]
+  document varchar [note: 'Document number without formatting.']
+  document_type document_types [not null, note: 'Type of document (RG, CPF or CNPJ).']
+  created_at timestamp
+  updated_at timestamp
+}
+
+enum property_type {
+  HOUSE
+  COMMERCIAL
+}
+
+Table addresses {
+  id int [primary key]
+  owner_id int [ref: > owners.id, note: 'Owner of the property located at this address.']
+  street_name varchar [note: 'Street or avenue name.']
+  number varchar [note: 'Property number. Kept as varchar to support suffixes like 123A.']
+  complement varchar [note: 'Apartment, floor, block or other complement.']
+  neighborhood varchar
+  city varchar
+  state varchar
+  zip_code varchar [note: 'Postal code.']
+  type property_type [not null, note: 'Property classification: HOUSE or COMMERCIAL.']
+  created_at timestamp
+  updated_at timestamp
+}
+
+enum contract_status {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+Table contracts {
+  id int [primary key]
+  owner_id int [ref: > owners.id, note: 'Owner signing the rental agreement.']
+  renter_id int [ref: > renters.id, note: 'Tenant signing the rental agreement.']
+  address_id int [ref: > addresses.id, note: 'Leased property address.']
+  start_date timestamp [note: 'Date when the rental period begins.']
+  end_date timestamp [note: 'Date when the rental period ends.']
+  monthly_revenue decimal [note: 'Current monthly rent amount.']
+  deposit_value decimal [note: 'Total security deposit amount.']
+  deposit_months int [note: 'Number of monthly rents equivalent to the security deposit.']
+  generation_date timestamp [note: 'When the contract document was generated.']
+  signed_date timestamp [note: 'When the contract was signed by the parties.']
+  cancel_date timestamp [note: 'When the contract was cancelled or terminated.']
+  status contract_status [not null, note: 'Lifecycle status of the contract.']
+  unrecognized_contract_file_path varchar [note: 'Path to the contract copy before notary recognition (cartório).']
+  recognized_contract_file_path varchar [note: 'Path to the contract copy after notary recognition (cartório).']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table contract_rent_adjustments {
+  id int [primary key]
+  contract_id int [ref: > contracts.id, note: 'Contract whose rent was adjusted.']
+  old_value decimal [note: 'Monthly rent value before the adjustment.']
+  new_value decimal [note: 'Monthly rent value after the adjustment.']
+  adjustment_date date [note: 'Date when the adjustment takes effect.']
+  reason varchar [note: 'Reason or legal basis for the adjustment (e.g. IGPM, anniversary).']
+  created_at timestamp
+}
