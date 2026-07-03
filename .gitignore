@@ -14,5 +14,8 @@ backend/.env.local
 
 # Backend
 backend/.venv
-backend/__pycache__
-backend/**/*.pyc
+backend/.pytest_cache
+backend/.ruff_cache
+backend/.coverage
+**/__pycache__/
+*.pyc

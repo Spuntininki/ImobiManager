@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: imobimanager-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: imobi
+      POSTGRES_PASSWORD: imobi
+      POSTGRES_DB: imobimanager
+    ports:
+      - "5433:5432"
+    volumes:
+      - imobimanager-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U imobi -d imobimanager"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  imobimanager-postgres-data:
