@@ -7,6 +7,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import app.models.owner  # noqa: F401 — ensures model is imported
+import app.models.user  # noqa: F401
+import app.models.user_owner  # noqa: F401
 from alembic import context
 from app.core.config import settings
 from app.models.base import Base  # noqa: F401 — registers metadata

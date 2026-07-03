@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import owners
+from app.api.v1.endpoints import auth, owners
 
 api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(auth.router)
 api_router.include_router(owners.router)

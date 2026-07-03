@@ -10,6 +10,8 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0,<2.1",
     "asyncpg>=0.31,<0.32",
     "alembic>=1.18,<1.19",
+    "bcrypt>=5.0,<5.1",
+    "pyjwt>=2.13,<2.14",
 ]
 
 [dependency-groups]
@@ -28,7 +30,7 @@ target-version = "py314"
 select = ["E", "F", "I", "UP", "B", "W"]
 
 [tool.ruff.lint.per-file-ignores]
-"app/tests/*" = ["S101"]
+"app/tests/*" = ["S101", "F841"]
 "app/api/**" = ["B008"]
 
 [tool.pytest.ini_options]

@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -17,8 +18,10 @@ from app.db.session import get_db
 from app.main import app
 from app.models.base import Base
 from app.models.owner import Owner  # noqa: F401 — registers table on metadata
+from app.models.user import User  # noqa: F401
+from app.models.user_owner import UserOwner  # noqa: F401
 
-# --- Test engine bound to the test database (never commits in tests) ---
+# --- Test engine bound to the test database ---
 test_engine = create_async_engine(
     settings.test_database_url,
     pool_pre_ping=True,
@@ -54,24 +57,13 @@ _reset_test_schema()
 
 
 @pytest_asyncio.fixture
-async def db_session() -> AsyncGenerator[AsyncSession]:
-    """Per-test async session with rollback, for direct DB access tests."""
-    async with test_session_factory() as session:
-        try:
-            yield session
-        finally:
-            await session.rollback()
-            await session.close()
+async def db_connection_session() -> AsyncGenerator[tuple[AsyncConnection, AsyncSession]]:
+    """Shared connection + outer transaction + savepoint session per test.
 
-
-@pytest_asyncio.fixture
-async def client() -> AsyncGenerator[AsyncClient]:
-    """HTTP client with get_db overridden to use a test-DB savepoint session.
-
-    Each test runs inside a single outer transaction on the test DB. Service
-    commits release savepoints (not the outer transaction), so data is
-    visible across requests within the same test but rolled back entirely
-    at teardown — no leakage between tests.
+    Both db_session and client bind to this single connection so that data
+    seeded via db_session is visible to requests made via client. The outer
+    transaction rolls back at teardown so tests never leak data into each
+    other.
     """
     connection = await test_engine.connect()
     transaction = await connection.begin()
@@ -80,6 +72,34 @@ async def client() -> AsyncGenerator[AsyncClient]:
         expire_on_commit=False,
         join_transaction_mode="create_savepoint",
     )
+    try:
+        yield connection, session
+    finally:
+        await session.close()
+        await transaction.rollback()
+        await connection.close()
+
+
+@pytest_asyncio.fixture
+async def db_session(
+    db_connection_session: tuple[AsyncConnection, AsyncSession],
+) -> AsyncSession:
+    """Per-test async session bound to the shared savepoint transaction."""
+    _, session = db_connection_session
+    return session
+
+
+@pytest_asyncio.fixture
+async def client(
+    db_connection_session: tuple[AsyncConnection, AsyncSession],
+) -> AsyncGenerator[AsyncClient]:
+    """HTTP client with get_db overridden to the shared savepoint session.
+
+    Service commits release savepoints (not the outer transaction), so data
+    is visible across requests within the same test and rolled back entirely
+    at teardown.
+    """
+    _, session = db_connection_session
 
     async def get_test_db() -> AsyncGenerator[AsyncSession]:
         yield session
@@ -91,5 +111,3 @@ async def client() -> AsyncGenerator[AsyncClient]:
         yield ac
 
     app.dependency_overrides.clear()
-    await transaction.rollback()
-    await connection.close()
