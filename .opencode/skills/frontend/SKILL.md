@@ -23,6 +23,7 @@ React/Vite single-page application for ImobiManager. Consumes the FastAPI backen
 - **UI language**: Brazilian Portuguese (pt-BR).
 - **Default theme**: dark.
 - **Dependencies**: before adding or updating any package, check its latest version from npm in the command line (e.g. `npm view <package> version`). Use a caret range (`^x.y.z`) or pin as appropriate, and let `package-lock.json` lock exact patches. Never guess versions.
+- **Commit messages**: concise. One imperative subject line (`feat: add owner CRUD`, `fix: reject negative rent`) in conventional-commits style; add a short body only when context is genuinely needed. Avoid multi-line summaries.
 - **Development style**: incremental and iterative. Ask before committing or moving to the next major step. Ask for clarification when requirements are ambiguous.
 - **Changes**: keep them minimal and focused on the requested task.
 

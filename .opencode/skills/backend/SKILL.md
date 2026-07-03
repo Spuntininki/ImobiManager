@@ -27,6 +27,7 @@ FastAPI REST backend for ImobiManager. Exposes the API consumed by the React fro
 - **Async**: use `async`/`await` and async SQLAlchemy sessions throughout.
 - **Database**: `backend/db/schema.dbml` is the source of truth for the data model. Models must mirror it.
 - **Dependencies**: before adding or pinning any package, check its latest version from PyPI in the command line (e.g. `curl -s https://pypi.org/pypi/<package>/json | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['version'])"`). Pin to the current major (e.g. `>=0.139,<0.140`) and let UV lock exact patches in `uv.lock`. Never guess versions.
+- **Commit messages**: concise. One imperative subject line (`feat: add owner CRUD`, `fix: reject negative rent`) in conventional-commits style; add a short body only when context is genuinely needed. Avoid multi-line summaries.
 - **Development style**: incremental and iterative. Ask before committing or moving to the next major step. Ask for clarification when requirements are ambiguous.
 - **Changes**: keep them minimal and focused on the requested task.
 
