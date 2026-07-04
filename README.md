@@ -108,6 +108,14 @@ uv run ruff format .          # apply formatting
 - `/tenants` — Tenants (Inquilinos)
 - `/contracts` — Contracts (Contratos)
 
-<!-- TODO Phase 2: API endpoints documentation -->
-<!-- TODO Phase 3: Auth documentation -->
+## API endpoints (backend)
+
+All under `/api/v1`, require `Authorization: Bearer <jwt>` unless noted.
+
+- `POST /auth/login` — exchange email + password for a JWT (no auth required).
+- `/owners` — CRUD; scoped to the caller via `user_owners`.
+- `/renters` — CRUD; global to any authenticated user.
+
+Migrations: `cd backend && uv run alembic upgrade head`.
+Admin user: `cd backend && uv run python -m app.cli create-user ...` (see step 2b above).
 <!-- TODO future: Frontend Docker image added to docker-compose.yml -->

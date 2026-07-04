@@ -28,7 +28,7 @@ Table renters {
   name varchar [note: 'Full name of the tenant.']
   primary_contact varchar [note: 'Main phone number.']
   secondary_contact varchar [note: 'Alternative phone number.']
-  e_mail varchar [note: 'Tenant email address.']
+  email varchar [note: 'Tenant email address.']
   created_at timestamp
   updated_at timestamp
 }
