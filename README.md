@@ -44,6 +44,14 @@ uv run uvicorn app.main:app --reload
 
 API at http://localhost:8000. Health check: `GET /health` → `{"status":"ok"}`.
 
+### 2b. Create the first admin user (CLI)
+
+```bash
+cd backend
+uv run python -m app.cli create-user --email admin@imobi.com --name Admin
+# Password will be prompted securely (hidden, with confirmation).
+```
+
 ### 3. Frontend
 
 ```bash

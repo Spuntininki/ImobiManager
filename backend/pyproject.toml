@@ -12,6 +12,7 @@ dependencies = [
     "alembic>=1.18,<1.19",
     "bcrypt>=5.0,<5.1",
     "pyjwt>=2.13,<2.14",
+    "typer>=0.26,<0.27",
 ]
 
 [dependency-groups]
