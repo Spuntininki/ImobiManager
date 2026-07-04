@@ -52,6 +52,10 @@ Table owner_documents {
   document_type document_types [not null, note: 'Type of document (RG, CPF or CNPJ).']
   created_at timestamp
   updated_at timestamp
+
+  indexes {
+    (owner_id, document_type) [unique]
+  }
 }
 
 Table renter_documents {

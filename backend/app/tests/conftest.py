@@ -17,8 +17,9 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.main import app
 from app.models.address import Address  # noqa: F401 — registers table on metadata
-from app.models.base import Base
+from app.models.base import Base  # noqa: F401 — used by _reset_test_schema
 from app.models.owner import Owner  # noqa: F401
+from app.models.owner_document import OwnerDocument  # noqa: F401
 from app.models.owner_renter import OwnerRenter  # noqa: F401
 from app.models.renter import Renter  # noqa: F401
 from app.models.renter_document import RenterDocument  # noqa: F401
