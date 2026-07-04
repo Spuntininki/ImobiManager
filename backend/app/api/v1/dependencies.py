@@ -1,7 +1,7 @@
 """Auth dependencies: current user resolution and owner access scoping."""
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,15 +11,15 @@ from app.models.user import User
 from app.models.user_owner import UserOwner
 
 # Token extraction from Authorization: Bearer <token>.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+http_bearer = HTTPBearer()
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
     session: AsyncSession = Depends(get_db),
 ) -> User:
     """Resolve the JWT bearer token to the authenticated User."""
-    user_id = decode_access_token(token)
+    user_id = decode_access_token(credentials.credentials)
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
