@@ -59,6 +59,12 @@
         "schemaName": "public",
         "x": 40.36673864337246,
         "y": 1441.2327999815593
+      },
+      {
+        "name": "owner_renters",
+        "schemaName": "public",
+        "x": 700.8074468429008,
+        "y": -98.6098664730528
       }
     ],
     "tableGroupCollapseStates": [],
