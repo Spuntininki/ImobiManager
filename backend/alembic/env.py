@@ -6,7 +6,8 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-import app.models.owner  # noqa: F401 — ensures model is imported
+import app.models.address  # noqa: F401 — ensures model is imported
+import app.models.owner  # noqa: F401
 import app.models.owner_renter  # noqa: F401
 import app.models.renter  # noqa: F401
 import app.models.renter_document  # noqa: F401

@@ -119,6 +119,9 @@ All under `/api/v1`, require `Authorization: Bearer <jwt>` unless noted.
 - `/renters/{renter_id}` — GET / PUT / DELETE; scoped via `owner_renters` (404-only).
 - `/renters/{renter_id}/documents` — POST / GET list; one document per type per renter (unique constraint). Reads are **masked** (last 2 digits for CPF/CNPJ, last 1 for RG) — the raw value never crosses HTTP.
 - `GET/PUT/DELETE /renters/{renter_id}/documents/{document_id}` — 404 if the document belongs to a different renter; 409 on duplicate type via PUT.
+- `POST /owners/{owner_id}/addresses` — create a property address under an owner (scoped).
+- `GET  /owners/{owner_id}/addresses` — list addresses for an owner (scoped).
+- `/addresses/{address_id}` — GET / PUT / DELETE; scoped via the owner on the address (404-only). `type` is `HOUSE` or `COMMERCIAL`.
 
 Migrations: `cd backend && uv run alembic upgrade head`.
 Admin user: `cd backend && uv run python -m app.cli create-user ...` (see step 2b above).

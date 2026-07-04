@@ -9,3 +9,10 @@ class DocumentType(enum.StrEnum):
     RG = "RG"
     CPF = "CPF"
     CNPJ = "CNPJ"
+
+
+class PropertyType(enum.StrEnum):
+    """Property classification: HOUSE or COMMERCIAL."""
+
+    HOUSE = "HOUSE"
+    COMMERCIAL = "COMMERCIAL"
