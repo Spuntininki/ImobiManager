@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import decode_access_token
 from app.db.session import get_db
+from app.models.renter import Renter
 from app.models.user import User
 from app.models.user_owner import UserOwner
 
@@ -44,9 +45,10 @@ async def get_current_active_owner(
 ) -> User:
     """Ensure the requested owner exists and the current user may manage it.
 
-    Order matters: if the owner does not exist, raise 404 (does not leak
-    whether the user ever had access). If the owner exists but the user is
-    not linked via user_owners, raise 403.
+    Security policy: 404-only. If the owner does not exist, or if it exists
+    but the user is not linked via user_owners, raise 404. This avoids
+    leaking whether an owner id is valid to a user who should not see it
+    (no 403 reconnaissance surface).
     """
     from app.models.owner import Owner
 
@@ -64,7 +66,45 @@ async def get_current_active_owner(
     )
     if link_result.scalar_one_or_none() is None:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not allowed to manage this owner",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Owner not found",
         )
     return current_user
+
+
+async def get_current_active_renter(
+    renter_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Renter:
+    """Ensure the requested renter exists and is reachable by the current user.
+
+    Security policy: 404-only. If the renter does not exist, or if it exists
+    but none of the owners the user manages is linked to it via owner_renters,
+    raise 404. This avoids leaking whether a renter id is valid to a user
+    who should not see it (no 403 reconnaissance surface).
+    """
+    from app.models.owner_renter import OwnerRenter
+
+    renter_result = await session.execute(select(Renter).where(Renter.id == renter_id))
+    renter = renter_result.scalar_one_or_none()
+    if renter is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Renter not found",
+        )
+    # Check that at least one owner the user manages is linked to this renter.
+    link_result = await session.execute(
+        select(OwnerRenter)
+        .join(UserOwner, UserOwner.owner_id == OwnerRenter.owner_id)
+        .where(
+            UserOwner.user_id == current_user.id,
+            OwnerRenter.renter_id == renter_id,
+        )
+    )
+    if link_result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Renter not found",
+        )
+    return renter

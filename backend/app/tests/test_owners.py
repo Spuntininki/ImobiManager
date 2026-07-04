@@ -94,7 +94,7 @@ async def test_get_owner_by_id(client: AsyncClient, db_session: AsyncSession) ->
     assert response.json()["name"] == "Single"
 
 
-async def test_get_owner_forbidden_when_not_linked(
+async def test_get_owner_not_found_when_not_linked(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
     user = await _create_user(db_session)
@@ -106,7 +106,7 @@ async def test_get_owner_forbidden_when_not_linked(
     db_session.add(other)
     await db_session.commit()
     response = await client.get(f"/api/v1/owners/{other.id}", headers=headers)
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 async def test_update_owner(client: AsyncClient, db_session: AsyncSession) -> None:
@@ -119,7 +119,7 @@ async def test_update_owner(client: AsyncClient, db_session: AsyncSession) -> No
     assert response.json()["name"] == "New"
 
 
-async def test_update_owner_forbidden_when_not_linked(
+async def test_update_owner_not_found_when_not_linked(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
     await _create_user(db_session)
@@ -130,7 +130,7 @@ async def test_update_owner_forbidden_when_not_linked(
     db_session.add(other)
     await db_session.commit()
     response = await client.put(f"/api/v1/owners/{other.id}", json={"name": "X"}, headers=headers)
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 async def test_delete_owner(client: AsyncClient, db_session: AsyncSession) -> None:
@@ -144,7 +144,7 @@ async def test_delete_owner(client: AsyncClient, db_session: AsyncSession) -> No
     assert get.status_code == 404
 
 
-async def test_delete_owner_forbidden_when_not_linked(
+async def test_delete_owner_not_found_when_not_linked(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
     await _create_user(db_session)
@@ -155,4 +155,4 @@ async def test_delete_owner_forbidden_when_not_linked(
     db_session.add(other)
     await db_session.commit()
     response = await client.delete(f"/api/v1/owners/{other.id}", headers=headers)
-    assert response.status_code == 403
+    assert response.status_code == 404
