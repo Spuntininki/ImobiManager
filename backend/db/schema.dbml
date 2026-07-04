@@ -61,6 +61,10 @@ Table renter_documents {
   document_type document_types [not null, note: 'Type of document (RG, CPF or CNPJ).']
   created_at timestamp
   updated_at timestamp
+
+  indexes {
+    (renter_id, document_type) [unique]
+  }
 }
 
 enum property_type {
