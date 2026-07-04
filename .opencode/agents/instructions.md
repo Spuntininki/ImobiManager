@@ -36,6 +36,7 @@ The authoritative database schema lives in `backend/db/schema.dbml`. Concept map
 - **Development style**: incremental and iterative. Ask before committing or moving to the next major step. Ask for clarification when requirements are ambiguous.
 - **Changes**: keep them minimal and focused on the requested task.
 - **Database**: `backend/db/schema.dbml` is the source of truth for the data model.
+- **Migrations** (Alembic): forward-only — maintain `upgrade()` only, do not rely on `downgrade()`.
 
 ## Folder Structure
 
