@@ -33,6 +33,12 @@ Table renters {
   updated_at timestamp
 }
 
+Table owner_renters {
+  id int [primary key]
+  owner_id int [ref: > owners.id, note: 'Owner who has a rental relationship with the linked renter.']
+  renter_id int [ref: > renters.id, note: 'Renter linked to the owner.']
+}
+
 enum document_types {
   RG
   CPF

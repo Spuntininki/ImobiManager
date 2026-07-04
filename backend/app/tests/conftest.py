@@ -18,6 +18,7 @@ from app.db.session import get_db
 from app.main import app
 from app.models.base import Base
 from app.models.owner import Owner  # noqa: F401 — registers table on metadata
+from app.models.owner_renter import OwnerRenter  # noqa: F401
 from app.models.renter import Renter  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.user_owner import UserOwner  # noqa: F401

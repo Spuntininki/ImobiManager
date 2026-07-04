@@ -113,8 +113,10 @@ uv run ruff format .          # apply formatting
 All under `/api/v1`, require `Authorization: Bearer <jwt>` unless noted.
 
 - `POST /auth/login` — exchange email + password for a JWT (no auth required).
-- `/owners` — CRUD; scoped to the caller via `user_owners`.
-- `/renters` — CRUD; global to any authenticated user.
+- `/owners` — CRUD; scoped to the caller via `user_owners` (404-only, no 403 leakage).
+- `POST /owners/{owner_id}/renters` — create a renter under an owner (scoped).
+- `GET  /owners/{owner_id}/renters` — list renters for an owner (scoped).
+- `/renters/{renter_id}` — GET / PUT / DELETE; scoped via `owner_renters` (404-only).
 
 Migrations: `cd backend && uv run alembic upgrade head`.
 Admin user: `cd backend && uv run python -m app.cli create-user ...` (see step 2b above).

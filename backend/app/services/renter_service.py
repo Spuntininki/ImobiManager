@@ -1,16 +1,19 @@
-"""Business logic for the Renter resource (global to authenticated users)."""
+"""Business logic for the Renter resource (owner-scoped via owner_renters)."""
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.owner_renter import OwnerRenter
 from app.models.renter import Renter
 from app.schemas.renter import RenterCreate, RenterUpdate
 
 
-async def create_renter(session: AsyncSession, payload: RenterCreate) -> Renter:
-    """Create a new renter."""
+async def create_renter(session: AsyncSession, payload: RenterCreate, owner_id: int) -> Renter:
+    """Create a new renter and link it to the given owner via owner_renters."""
     renter = Renter(**payload.model_dump())
     session.add(renter)
+    await session.flush()
+    session.add(OwnerRenter(owner_id=owner_id, renter_id=renter.id))
     await session.commit()
     await session.refresh(renter)
     return renter
@@ -22,9 +25,14 @@ async def get_renter(session: AsyncSession, renter_id: int) -> Renter | None:
     return result.scalar_one_or_none()
 
 
-async def list_renters(session: AsyncSession) -> list[Renter]:
-    """Return all renters, ordered by id."""
-    result = await session.execute(select(Renter).order_by(Renter.id))
+async def list_renters_for_owner(session: AsyncSession, owner_id: int) -> list[Renter]:
+    """Return renters linked to the given owner, ordered by id."""
+    result = await session.execute(
+        select(Renter)
+        .join(OwnerRenter, OwnerRenter.renter_id == Renter.id)
+        .where(OwnerRenter.owner_id == owner_id)
+        .order_by(Renter.id)
+    )
     return list(result.scalars().all())
 
 
@@ -43,7 +51,7 @@ async def update_renter(
 
 
 async def delete_renter(session: AsyncSession, renter_id: int) -> bool:
-    """Delete a renter by id.
+    """Delete a renter by id, including its owner_renters links.
 
     Returns True if deleted, False if not found.
     """
@@ -51,6 +59,9 @@ async def delete_renter(session: AsyncSession, renter_id: int) -> bool:
     renter = await get_renter(session, renter_id)
     if renter is None:
         return False
+    # Remove owner_renters links first via bulk delete to avoid the FK
+    # violation when the renter row is flushed.
+    await session.execute(delete(OwnerRenter).where(OwnerRenter.renter_id == renter_id))
     await session.delete(renter)
     await session.commit()
     return True
