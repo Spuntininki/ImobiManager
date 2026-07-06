@@ -13,5 +13,6 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     """Access token returned by login."""
 
+    user_name: str
     access_token: str
     token_type: str = "bearer"

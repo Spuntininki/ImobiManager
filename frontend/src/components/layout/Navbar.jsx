@@ -59,7 +59,7 @@ function NavLinks({ mobile = false }) {
 }
 
 export function Navbar() {
-  const { user, logout } = useAuth();
+  const { email, userName, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -83,9 +83,9 @@ export function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel className="flex flex-col gap-1">
-                <span>{user?.email}</span>
+                <span>{userName}</span>
                 <span className="text-xs font-normal text-muted-foreground">
-                  {user?.email}
+                  {email}
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

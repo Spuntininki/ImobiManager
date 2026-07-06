@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState(null);
+  const [userName, setUserName] = useState(null);
 
   // On mount, treat a stored token as a session. The API will reject it
   // via the axios 401 interceptor if it's invalid/expired, which clears
@@ -20,6 +21,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const resp = await api.post("/auth/login", { email, password });
+    setUserName(resp.data.user_name)
     setToken(resp.data.access_token);
     setIsAuthenticated(true);
     setEmail(email);
@@ -33,6 +35,7 @@ export function AuthProvider({ children }) {
   };
 
   const value = {
+    userName,
     email,
     isAuthenticated,
     isLoading,

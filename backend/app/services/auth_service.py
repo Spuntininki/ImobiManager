@@ -14,4 +14,4 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> str 
     user = result.scalar_one_or_none()
     if user is None or not verify_password(password, user.password):
         return None
-    return create_access_token(user.id)
+    return user.name, create_access_token(user.id)
