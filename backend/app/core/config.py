@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     database_url: str
     test_database_url: str
     secret_key: str = "change-me"
+    # CORS allowlist. Default permits the Vite dev server origin. In
+    # production, set via the CORS_ORIGINS env var (comma-separated or JSON
+    # array) to the real frontend origin(s).
+    cors_origins: list[str] = ["http://localhost:5173"]
 
 
 settings = Settings()
