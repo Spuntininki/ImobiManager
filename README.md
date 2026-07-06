@@ -52,6 +52,14 @@ uv run python -m app.cli create-user --email admin@imobi.com --name Admin
 # Password will be prompted securely (hidden, with confirmation).
 ```
 
+Operator CLI also provides `delete-user` and `update-password`:
+
+```bash
+uv run python -m app.cli delete-user --email admin@imobi.com          # prompts to confirm
+uv run python -m app.cli delete-user --email admin@imobi.com --yes    # skip confirmation
+uv run python -m app.cli update-password --email admin@imobi.com      # prompts for new password
+```
+
 ### 3. Frontend
 
 ```bash

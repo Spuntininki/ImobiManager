@@ -22,3 +22,32 @@ async def create_user(session: AsyncSession, email: str, name: str, password: st
     await session.commit()
     await session.refresh(user)
     return user
+
+
+async def delete_user(session: AsyncSession, email: str) -> bool:
+    """Delete a user by email.
+
+    Returns True if deleted, False if no user with the given email exists.
+    """
+    # TODO(phase future): replace physical delete with soft delete.
+    result = await session.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if user is None:
+        return False
+    await session.delete(user)
+    await session.commit()
+    return True
+
+
+async def update_password(session: AsyncSession, email: str, new_password: str) -> bool:
+    """Update a user's password by email.
+
+    Returns True if updated, False if no user with the given email exists.
+    """
+    result = await session.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if user is None:
+        return False
+    user.password = hash_password(new_password)
+    await session.commit()
+    return True
