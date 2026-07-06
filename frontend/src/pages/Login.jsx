@@ -21,8 +21,9 @@ export function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
@@ -31,8 +32,19 @@ export function Login() {
       return;
     }
 
-    login(email);
-    navigate("/");
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
+      navigate("/");
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setError("E-mail ou senha inválidos.");
+      } else {
+        setError("Não foi possível conectar ao servidor.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -61,6 +73,8 @@ export function Login() {
                   placeholder="proprietario@exemplo.com"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -72,6 +86,8 @@ export function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -80,13 +96,14 @@ export function Login() {
               )}
 
               <p className="text-xs text-muted-foreground">
-                Modo simulado: qualquer e-mail e senha funcionam.
+                Use as credenciais cadastradas no backend via CLI
+                (create-user).
               </p>
             </CardContent>
 
             <CardFooter>
-              <Button type="submit" className="w-full">
-                Entrar
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Entrando..." : "Entrar"}
               </Button>
             </CardFooter>
           </form>

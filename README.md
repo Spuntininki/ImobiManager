@@ -64,11 +64,14 @@ uv run python -m app.cli update-password --email admin@imobi.com      # prompts 
 
 ```bash
 cd frontend
-npm install
+npm ci        # deterministic install (respects package-lock.json)
 npm run dev
 ```
 
-SPA at http://localhost:5173.
+SPA at http://localhost:5173. In dev, Vite proxies `/api` → `http://localhost:8000`
+(see `vite.config.js`), so start the backend first. `npm install` is only for
+adding/upgrading dependencies (it updates the lock file); use `npm ci` for
+fresh clones and CI.
 
 ## Testing
 

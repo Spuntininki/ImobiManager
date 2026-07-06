@@ -1,40 +1,40 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
+import api from "@/lib/api";
+import { clearToken, getToken, setToken } from "@/lib/auth";
+
 const AuthContext = createContext(null);
 
-const STORAGE_KEY = "imobimanager_session";
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [email, setEmail] = useState(null);
 
+  // On mount, treat a stored token as a session. The API will reject it
+  // via the axios 401 interceptor if it's invalid/expired, which clears
+  // the token and flips isAuthenticated back to false.
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setUser(parsed);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
+    setIsAuthenticated(!!getToken());
     setIsLoading(false);
   }, []);
 
-  const login = (email) => {
-    const newUser = { email, name: "Proprietário" };
-    setUser(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+  const login = async (email, password) => {
+    const resp = await api.post("/auth/login", { email, password });
+    setToken(resp.data.access_token);
+    setIsAuthenticated(true);
+    setEmail(email);
+    return resp.data;
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
+    clearToken();
+    setIsAuthenticated(false);
+    setEmail(null);
   };
 
   const value = {
-    user,
-    isAuthenticated: !!user,
+    email,
+    isAuthenticated,
     isLoading,
     login,
     logout,
