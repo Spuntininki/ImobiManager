@@ -83,7 +83,7 @@ export function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel className="flex flex-col gap-1">
-                <span>Proprietário</span>
+                <span>{user?.email}</span>
                 <span className="text-xs font-normal text-muted-foreground">
                   {user?.email}
                 </span>
