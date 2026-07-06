@@ -117,13 +117,3 @@ Table contracts {
   created_at timestamp
   updated_at timestamp
 }
-
-Table contract_rent_adjustments {
-  id int [primary key]
-  contract_id int [ref: > contracts.id, note: 'Contract whose rent was adjusted.']
-  old_value decimal [note: 'Monthly rent value before the adjustment.']
-  new_value decimal [note: 'Monthly rent value after the adjustment.']
-  adjustment_date date [note: 'Date when the adjustment takes effect.']
-  reason varchar [note: 'Reason or legal basis for the adjustment (e.g. IGPM, anniversary).']
-  created_at timestamp
-}
