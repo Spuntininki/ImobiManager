@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import decode_access_token
 from app.db.session import get_db
 from app.models.address import Address
+from app.models.contract import Contract
 from app.models.renter import Renter
 from app.models.user import User
 from app.models.user_owner import UserOwner
@@ -141,3 +142,35 @@ async def get_current_active_address(
             detail="Address not found",
         )
     return address
+
+
+async def get_current_active_contract(
+    contract_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Contract:
+    """Ensure the requested contract exists and is reachable by the current user.
+
+    Security policy: 404-only. If the contract does not exist, or if it
+    exists but its owner is not managed by the current user (via
+    user_owners), raise 404. No 403 reconnaissance surface.
+    """
+    contract_result = await session.execute(select(Contract).where(Contract.id == contract_id))
+    contract = contract_result.scalar_one_or_none()
+    if contract is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Contract not found",
+        )
+    link_result = await session.execute(
+        select(UserOwner).where(
+            UserOwner.user_id == current_user.id,
+            UserOwner.owner_id == contract.owner_id,
+        )
+    )
+    if link_result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Contract not found",
+        )
+    return contract

@@ -124,6 +124,9 @@ All under `/api/v1`, require `Authorization: Bearer <jwt>` unless noted.
 - `/addresses/{address_id}` — GET / PUT / DELETE; scoped via the owner on the address (404-only). `type` is `HOUSE` or `COMMERCIAL`.
 - `/owners/{owner_id}/documents` — POST / GET list; one document per type per owner (unique constraint). Reads are **masked** (last 2 digits for CPF/CNPJ, last 1 for RG) — the raw value never crosses HTTP.
 - `GET/PUT/DELETE /owners/{owner_id}/documents/{document_id}` — 404 if the document belongs to a different owner; 409 on duplicate type via PUT.
+- `POST /owners/{owner_id}/contracts` — create a contract tying together an owner, a renter, and an address. `status` auto-`PENDING`, `generation_date` auto-`now()`. Validates renter↔owner (via `owner_renters`) and address↔owner consistency — 422 on mismatch. `*_file_path` fields are not accepted from clients (backend-only).
+- `GET  /owners/{owner_id}/contracts` — list contracts for an owner (scoped).
+- `/contracts/{contract_id}` — GET / PATCH (partial) / DELETE; scoped via the contract's owner (404-only). PATCH accepts status/lifecycle changes (free transitions); `*_file_path` not accepted. Money fields use `Numeric(12, 2)`.
 
 Migrations: `cd backend && uv run alembic upgrade head`.
 Admin user: `cd backend && uv run python -m app.cli create-user ...` (see step 2b above).

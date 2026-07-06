@@ -16,3 +16,12 @@ class PropertyType(enum.StrEnum):
 
     HOUSE = "HOUSE"
     COMMERCIAL = "COMMERCIAL"
+
+
+class ContractStatus(enum.StrEnum):
+    """Lifecycle status of a contract."""
+
+    PENDING = "PENDING"
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
