@@ -13,6 +13,12 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     """Access token returned by login."""
 
-    user_name: str
     access_token: str
     token_type: str = "bearer"
+
+
+class UserProfile(BaseModel):
+    """Authenticated user's profile (returned by /auth/me)."""
+
+    user_name: str
+    email: str

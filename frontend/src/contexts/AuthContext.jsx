@@ -11,20 +11,44 @@ export function AuthProvider({ children }) {
   const [email, setEmail] = useState(null);
   const [userName, setUserName] = useState(null);
 
-  // On mount, treat a stored token as a session. The API will reject it
-  // via the axios 401 interceptor if it's invalid/expired, which clears
-  // the token and flips isAuthenticated back to false.
+  // Validate the stored token via /auth/me and rehydrate the in-memory
+  // profile (user name, email). If the token is invalid/expired, the
+  // backend returns 401, the axios interceptor clears the token, and we
+  // flip to logged-out. isLoading stays true until the call settles so
+  // AppRoutes doesn't flash the Login page on refresh.
   useEffect(() => {
-    setIsAuthenticated(!!getToken());
-    setIsLoading(false);
+    const token = getToken();
+    if (!token) {
+      setIsLoading(false);
+      setIsAuthenticated(false);
+      return;
+    }
+
+    api
+      .get("/auth/me")
+      .then((resp) => {
+        setUserName(resp.data.user_name);
+        setEmail(resp.data.email);
+        setIsAuthenticated(true);
+      })
+      .catch(() => {
+        // 401 interceptor already cleared the token; ensure logged-out state.
+        setUserName(null);
+        setEmail(null);
+        setIsAuthenticated(false);
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = async (email, password) => {
     const resp = await api.post("/auth/login", { email, password });
-    setUserName(resp.data.user_name)
     setToken(resp.data.access_token);
+    // Fetch the profile from /auth/me so login and page refresh share one
+    // single source of truth for the user's name/email.
+    const me = await api.get("/auth/me");
+    setUserName(me.data.user_name);
+    setEmail(me.data.email);
     setIsAuthenticated(true);
-    setEmail(email);
     return resp.data;
   };
 
