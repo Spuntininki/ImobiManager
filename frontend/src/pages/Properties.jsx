@@ -192,7 +192,7 @@ export function Properties() {
                 <TableHead>Cidade/UF</TableHead>
                 <TableHead>CEP</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead className="w-16 text-right"></TableHead>
+                <TableHead className="w-24 text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -232,21 +232,23 @@ export function Properties() {
                       {PROPERTY_TYPE_LABELS[address.type] ?? address.type}
                     </TableCell>
                     <TableCell className="text-right">
-                      <AddressDialog
-                        address={address}
-                        onSubmit={(payload, onClose) =>
-                          handleUpdate(address.id, payload, onClose)
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => handleDelete(address.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <AddressDialog
+                          address={address}
+                          onSubmit={(payload, onClose) =>
+                            handleUpdate(address.id, payload, onClose)
+                          }
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(address.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -177,7 +177,7 @@ export function Tenants() {
                 <TableHead>Contato principal</TableHead>
                 <TableHead>Contato secundário</TableHead>
                 <TableHead>E-mail</TableHead>
-                <TableHead className="w-16 text-right"></TableHead>
+                <TableHead className="w-24 text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -208,21 +208,23 @@ export function Tenants() {
                     <TableCell>{renter.secondary_contact ?? "—"}</TableCell>
                     <TableCell>{renter.email ?? "—"}</TableCell>
                     <TableCell className="text-right">
-                      <RenterDialog
-                        renter={renter}
-                        onSubmit={(payload, onClose) =>
-                          handleUpdate(renter.id, payload, onClose)
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => handleDelete(renter.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Excluir</span>
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <RenterDialog
+                          renter={renter}
+                          onSubmit={(payload, onClose) =>
+                            handleUpdate(renter.id, payload, onClose)
+                          }
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(renter.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

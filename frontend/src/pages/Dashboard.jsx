@@ -109,7 +109,7 @@ export function Dashboard() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead className="w-16 text-right"></TableHead>
+              <TableHead className="w-24 text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -137,21 +137,23 @@ export function Dashboard() {
                 <TableRow key={owner.id}>
                   <TableCell className="font-medium">{owner.name}</TableCell>
                   <TableCell className="text-right">
-                    <OwnerDialog
-                      owner={owner}
-                      onSubmit={(name, onClose) =>
-                        handleUpdate(owner.id, name, onClose)
-                      }
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => handleDelete(owner.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Excluir</span>
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <OwnerDialog
+                        owner={owner}
+                        onSubmit={(name, onClose) =>
+                          handleUpdate(owner.id, name, onClose)
+                        }
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleDelete(owner.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Excluir</span>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

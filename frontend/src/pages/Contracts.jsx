@@ -231,7 +231,7 @@ export function Contracts() {
                 <TableHead>Aluguel</TableHead>
                 <TableHead>Depósito</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-16 text-right"></TableHead>
+                <TableHead className="w-24 text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -285,23 +285,25 @@ export function Contracts() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <ContractDialog
-                          contract={contract}
-                          renters={renters}
-                          addresses={addresses}
-                          onSubmit={(payload, onClose) =>
-                            handleUpdate(contract.id, payload, onClose)
-                          }
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleDelete(contract.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Excluir</span>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <ContractDialog
+                            contract={contract}
+                            renters={renters}
+                            addresses={addresses}
+                            onSubmit={(payload, onClose) =>
+                              handleUpdate(contract.id, payload, onClose)
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleDelete(contract.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Excluir</span>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
