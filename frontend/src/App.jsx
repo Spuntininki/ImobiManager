@@ -6,6 +6,7 @@ import { Contracts } from "@/pages/Contracts";
 import { Dashboard } from "@/pages/Dashboard";
 import { Login } from "@/pages/Login";
 import { Properties } from "@/pages/Properties";
+import { Settings } from "@/pages/Settings";
 import { Tenants } from "@/pages/Tenants";
 
 function AppRoutes() {
@@ -28,6 +29,7 @@ function AppRoutes() {
           <Route path="/properties" element={<Properties />} />
           <Route path="/tenants" element={<Tenants />} />
           <Route path="/contracts" element={<Contracts />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
     </div>

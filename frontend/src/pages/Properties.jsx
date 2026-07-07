@@ -141,7 +141,7 @@ export function Properties() {
         ) : owners.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Nenhum proprietário cadastrado.{" "}
-            <Link to="/" className="underline">
+            <Link to="/settings" className="underline">
               Crie um proprietário primeiro
             </Link>
             .

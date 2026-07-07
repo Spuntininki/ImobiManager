@@ -1,5 +1,5 @@
-import { Building2, LogOut, Menu, User } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { Building2, LogOut, Menu, Settings, User } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -89,6 +89,12 @@ export function Navbar() {
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="flex cursor-pointer items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Configurações</span>
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sair</span>
