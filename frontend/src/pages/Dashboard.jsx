@@ -35,7 +35,7 @@ export function Dashboard() {
     try {
       const resp = await api.get("/owners");
       setOwners(resp.data);
-    } catch (err) {
+    } catch {
       setError("Não foi possível carregar os proprietários.");
     } finally {
       setIsLoading(false);
@@ -99,7 +99,7 @@ export function Dashboard() {
           </div>
         ) : owners.length === 0 ? (
           <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground shadow-sm">
-            Nenhum proprietário cadastrado. Clique em "Adicionar" para começar.
+            Nenhum proprietário cadastrado. Clique em &quot;Adicionar&quot; para começar.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
