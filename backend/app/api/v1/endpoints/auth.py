@@ -13,11 +13,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, session: AsyncSession = Depends(get_db)) -> TokenResponse:
     """Authenticate with email + password and return a JWT."""
-    user, token = await auth_service.authenticate(session, payload.email, payload.password)
-    if token is None:
+    result = await auth_service.authenticate(session, payload.email, payload.password)
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return TokenResponse(user_name=user, access_token=token)
+    user_name, token = result
+    return TokenResponse(user_name=user_name, access_token=token)

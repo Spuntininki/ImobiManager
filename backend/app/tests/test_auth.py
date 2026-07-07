@@ -27,6 +27,7 @@ async def test_login_success(client: AsyncClient, db_session: AsyncSession) -> N
     data = response.json()
     assert data["token_type"] == "bearer"
     assert data["access_token"]
+    assert data["user_name"] == "Test User"
 
 
 async def test_login_wrong_password(client: AsyncClient, db_session: AsyncSession) -> None:
