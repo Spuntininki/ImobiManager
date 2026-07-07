@@ -6,13 +6,6 @@ import api from "@/lib/api";
 import { useOwners } from "@/lib/useOwners";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const EMPTY_FORM = {
   name: "",
@@ -156,47 +157,60 @@ export function Tenants() {
       )}
 
       {selectedOwnerId !== null && owners.length > 0 && (
-        <div className="mt-4">
-          {isLoadingRenters ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Carregando...
-            </div>
-          ) : renters.length === 0 ? (
-            <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground shadow-sm">
-              Nenhum inquilino cadastrado para este proprietário. Clique em
-              &quot;Adicionar&quot; para começar.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {renters.map((renter) => (
-                <Card key={renter.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{renter.name}</CardTitle>
-                    <CardDescription>
-                      {renter.email ? `${renter.email} · ` : ""}
-                      {renter.primary_contact}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {renter.secondary_contact && (
-                      <p className="mb-4 text-sm text-muted-foreground">
-                        Contato secundário: {renter.secondary_contact}
-                      </p>
-                    )}
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(renter.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        <div className="mt-4 overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Contato principal</TableHead>
+                <TableHead>Contato secundário</TableHead>
+                <TableHead>E-mail</TableHead>
+                <TableHead className="w-16 text-right"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingRenters ? (
+                <TableRow>
+                  <TableCell colSpan={5}>
+                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Carregando...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : renters.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-8 text-center text-muted-foreground"
+                  >
+                    Nenhum inquilino cadastrado para este proprietário. Clique
+                    em &quot;Adicionar&quot; para começar.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                renters.map((renter) => (
+                  <TableRow key={renter.id}>
+                    <TableCell className="font-medium">{renter.name}</TableCell>
+                    <TableCell>{renter.primary_contact}</TableCell>
+                    <TableCell>{renter.secondary_contact ?? "—"}</TableCell>
+                    <TableCell>{renter.email ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleDelete(renter.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Excluir</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

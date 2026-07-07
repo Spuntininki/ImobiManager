@@ -4,13 +4,6 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,6 +14,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Dashboard() {
@@ -91,40 +92,54 @@ export function Dashboard() {
         <p className="mt-4 text-sm font-medium text-destructive">{error}</p>
       )}
 
-      <div className="mt-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-            Carregando...
-          </div>
-        ) : owners.length === 0 ? (
-          <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground shadow-sm">
-            Nenhum proprietário cadastrado. Clique em &quot;Adicionar&quot; para começar.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {owners.map((owner) => (
-              <Card key={owner.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{owner.name}</CardTitle>
-                  <CardDescription>
-                    ID {owner.id}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(owner.id)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+      <div className="mt-4 overflow-x-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead className="w-16 text-right"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={2}>
+                  <div className="flex items-center justify-center py-12 text-muted-foreground">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Carregando...
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : owners.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={2}
+                  className="py-8 text-center text-muted-foreground"
+                >
+                  Nenhum proprietário cadastrado. Clique em
+                  &quot;Adicionar&quot; para começar.
+                </TableCell>
+              </TableRow>
+            ) : (
+              owners.map((owner) => (
+                <TableRow key={owner.id}>
+                  <TableCell className="font-medium">{owner.name}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleDelete(owner.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Excluir</span>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

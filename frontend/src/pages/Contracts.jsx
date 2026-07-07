@@ -6,13 +6,6 @@ import api from "@/lib/api";
 import { useOwners } from "@/lib/useOwners";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const STATUS_LABELS = {
   PENDING: "Pendente",
@@ -206,71 +207,86 @@ export function Contracts() {
       )}
 
       {selectedOwnerId !== null && owners.length > 0 && (
-        <div className="mt-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Carregando...
-            </div>
-          ) : contracts.length === 0 ? (
-            <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground shadow-sm">
-              Nenhum contrato cadastrado para este proprietário. Clique em
-              &quot;Adicionar&quot; para começar.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {contracts.map((contract) => {
-                const renter = renterMap[contract.renter_id];
-                const address = addressMap[contract.address_id];
-                return (
-                  <Card key={contract.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">
-                            {renter?.name ?? `Inquilino #${contract.renter_id}`}
-                          </CardTitle>
-                          <CardDescription>
-                            {address
-                              ? `${address.street_name}, ${address.number}`
-                              : `Imóvel #${contract.address_id}`}
-                          </CardDescription>
-                        </div>
-                        <span className="shrink-0 rounded-md border bg-muted px-2 py-1 text-xs font-medium">
-                          {STATUS_LABELS[contract.status] ?? contract.status}
-                        </span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <p className="text-sm">
-                        <span className="text-muted-foreground">Período:</span>{" "}
+        <div className="mt-4 overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Inquilino</TableHead>
+                <TableHead>Imóvel</TableHead>
+                <TableHead>Período</TableHead>
+                <TableHead>Aluguel</TableHead>
+                <TableHead>Depósito</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-16 text-right"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Carregando...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : contracts.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="py-8 text-center text-muted-foreground"
+                  >
+                    Nenhum contrato cadastrado para este proprietário. Clique em
+                    &quot;Adicionar&quot; para começar.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                contracts.map((contract) => {
+                  const renter = renterMap[contract.renter_id];
+                  const address = addressMap[contract.address_id];
+                  return (
+                    <TableRow key={contract.id}>
+                      <TableCell className="font-medium">
+                        {renter?.name ?? `Inquilino #${contract.renter_id}`}
+                      </TableCell>
+                      <TableCell>
+                        {address
+                          ? `${address.street_name}, ${address.number}`
+                          : `Imóvel #${contract.address_id}`}
+                      </TableCell>
+                      <TableCell>
                         {formatIsoDate(contract.start_date)} até{" "}
                         {formatIsoDate(contract.end_date)}
-                      </p>
-                      <p className="text-sm">
-                        <span className="text-muted-foreground">Aluguel:</span>{" "}
+                      </TableCell>
+                      <TableCell>
                         {CURRENCY.format(Number(contract.monthly_revenue))}
-                      </p>
-                      <p className="text-sm">
-                        <span className="text-muted-foreground">Depósito:</span>{" "}
+                      </TableCell>
+                      <TableCell>
                         {CURRENCY.format(Number(contract.deposit_value))} (
                         {contract.deposit_months}x)
-                      </p>
-                      <Button
-                        className="mt-2"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(contract.id)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="rounded-md border bg-muted px-2 py-1 text-xs font-medium">
+                          {STATUS_LABELS[contract.status] ?? contract.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(contract.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Excluir</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

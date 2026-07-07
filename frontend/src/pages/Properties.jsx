@@ -6,13 +6,6 @@ import api from "@/lib/api";
 import { useOwners } from "@/lib/useOwners";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Map backend PropertyType enum to pt-BR display labels.
 const PROPERTY_TYPE_LABELS = {
@@ -168,54 +169,72 @@ export function Properties() {
       )}
 
       {selectedOwnerId !== null && owners.length > 0 && (
-        <div className="mt-4">
-          {isLoadingAddresses ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Carregando...
-            </div>
-          ) : addresses.length === 0 ? (
-            <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground shadow-sm">
-              Nenhum imóvel cadastrado para este proprietário. Clique em
-              &quot;Adicionar&quot; para começar.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {addresses.map((address) => (
-                <Card key={address.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">
-                          {address.street_name}, {address.number}
-                        </CardTitle>
-                        <CardDescription>
-                          {address.complement
-                            ? `${address.complement} · `
-                            : ""}
-                          {address.neighborhood} · {address.city}/
-                          {address.state} · CEP {address.zip_code}
-                        </CardDescription>
-                      </div>
-                      <span className="shrink-0 rounded-md border bg-muted px-2 py-1 text-xs font-medium">
-                        {PROPERTY_TYPE_LABELS[address.type] ?? address.type}
-                      </span>
+        <div className="mt-4 overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Logradouro</TableHead>
+                <TableHead>Nº</TableHead>
+                <TableHead>Complemento</TableHead>
+                <TableHead>Bairro</TableHead>
+                <TableHead>Cidade/UF</TableHead>
+                <TableHead>CEP</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead className="w-16 text-right"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingAddresses ? (
+                <TableRow>
+                  <TableCell colSpan={8}>
+                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Carregando...
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(address.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                  </TableCell>
+                </TableRow>
+              ) : addresses.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className="py-8 text-center text-muted-foreground"
+                  >
+                    Nenhum imóvel cadastrado para este proprietário. Clique em
+                    &quot;Adicionar&quot; para começar.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                addresses.map((address) => (
+                  <TableRow key={address.id}>
+                    <TableCell className="font-medium">
+                      {address.street_name}
+                    </TableCell>
+                    <TableCell>{address.number}</TableCell>
+                    <TableCell>{address.complement ?? "—"}</TableCell>
+                    <TableCell>{address.neighborhood}</TableCell>
+                    <TableCell>
+                      {address.city}/{address.state}
+                    </TableCell>
+                    <TableCell>{address.zip_code}</TableCell>
+                    <TableCell>
+                      {PROPERTY_TYPE_LABELS[address.type] ?? address.type}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleDelete(address.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Excluir</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
