@@ -1,4 +1,4 @@
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -86,6 +86,18 @@ export function Tenants() {
     }
   }
 
+  async function handleUpdate(renterId, payload, onClose) {
+    try {
+      const resp = await api.put(`/renters/${renterId}`, payload);
+      setRenters((prev) =>
+        prev.map((renter) => (renter.id === renterId ? resp.data : renter))
+      );
+      onClose();
+    } catch {
+      setError("Não foi possível atualizar o inquilino.");
+    }
+  }
+
   async function handleDelete(renterId) {
     if (!confirm("Excluir este inquilino? Esta ação não pode ser desfeita.")) {
       return;
@@ -148,7 +160,7 @@ export function Tenants() {
       {selectedOwnerId !== null && owners.length > 0 && (
         <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Inquilinos</h2>
-          <CreateRenterDialog onCreate={handleCreate} />
+          <RenterDialog onSubmit={handleCreate} />
         </div>
       )}
 
@@ -196,6 +208,12 @@ export function Tenants() {
                     <TableCell>{renter.secondary_contact ?? "—"}</TableCell>
                     <TableCell>{renter.email ?? "—"}</TableCell>
                     <TableCell className="text-right">
+                      <RenterDialog
+                        renter={renter}
+                        onSubmit={(payload, onClose) =>
+                          handleUpdate(renter.id, payload, onClose)
+                        }
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
@@ -217,14 +235,23 @@ export function Tenants() {
   );
 }
 
-function CreateRenterDialog({ onCreate }) {
+function RenterDialog({ renter, onSubmit }) {
+  const isEdit = renter !== undefined;
+  const initialForm = isEdit
+    ? {
+        name: renter.name,
+        primary_contact: renter.primary_contact,
+        secondary_contact: renter.secondary_contact ?? "",
+        email: renter.email ?? "",
+      }
+    : EMPTY_FORM;
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleClose() {
     setOpen(false);
-    setForm(EMPTY_FORM);
+    setForm(initialForm);
   }
 
   function updateField(field, value) {
@@ -241,7 +268,7 @@ function CreateRenterDialog({ onCreate }) {
     };
     setIsSubmitting(true);
     try {
-      await onCreate(payload, handleClose);
+      await onSubmit(payload, handleClose);
     } finally {
       setIsSubmitting(false);
     }
@@ -250,17 +277,32 @@ function CreateRenterDialog({ onCreate }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar
-        </Button>
+        {isEdit ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-muted"
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Adicionar inquilino</DialogTitle>
+            <DialogTitle>
+              {isEdit ? "Editar inquilino" : "Adicionar inquilino"}
+            </DialogTitle>
             <DialogDescription>
-              Cadastre um morador para o proprietário selecionado.
+              {isEdit
+                ? "Altere os dados do morador."
+                : "Cadastre um morador para o proprietário selecionado."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -316,7 +358,7 @@ function CreateRenterDialog({ onCreate }) {
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Criando..." : "Criar"}
+              {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
         </form>

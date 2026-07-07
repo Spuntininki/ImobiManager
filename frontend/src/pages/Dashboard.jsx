@@ -1,4 +1,4 @@
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import api from "@/lib/api";
@@ -57,6 +57,18 @@ export function Dashboard() {
     }
   }
 
+  async function handleUpdate(ownerId, name, onClose) {
+    try {
+      const resp = await api.put(`/owners/${ownerId}`, { name });
+      setOwners((prev) =>
+        prev.map((owner) => (owner.id === ownerId ? resp.data : owner))
+      );
+      onClose();
+    } catch {
+      setError("Não foi possível atualizar o proprietário.");
+    }
+  }
+
   async function handleDelete(ownerId) {
     if (!confirm("Excluir este proprietário? Esta ação não pode ser desfeita.")) {
       return;
@@ -85,7 +97,7 @@ export function Dashboard() {
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="text-xl font-semibold">Proprietários</h2>
-        <CreateOwnerDialog onCreate={handleCreate} />
+        <OwnerDialog onSubmit={handleCreate} />
       </div>
 
       {error && (
@@ -125,6 +137,12 @@ export function Dashboard() {
                 <TableRow key={owner.id}>
                   <TableCell className="font-medium">{owner.name}</TableCell>
                   <TableCell className="text-right">
+                    <OwnerDialog
+                      owner={owner}
+                      onSubmit={(name, onClose) =>
+                        handleUpdate(owner.id, name, onClose)
+                      }
+                    />
                     <Button
                       variant="ghost"
                       size="icon"
@@ -145,14 +163,15 @@ export function Dashboard() {
   );
 }
 
-function CreateOwnerDialog({ onCreate }) {
+function OwnerDialog({ owner, onSubmit }) {
+  const isEdit = owner !== undefined;
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(isEdit ? owner.name : "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleClose() {
     setOpen(false);
-    setName("");
+    setName(isEdit ? owner.name : "");
   }
 
   async function handleSubmit(event) {
@@ -160,7 +179,7 @@ function CreateOwnerDialog({ onCreate }) {
     if (!name.trim()) return;
     setIsSubmitting(true);
     try {
-      await onCreate(name.trim(), handleClose);
+      await onSubmit(name.trim(), handleClose);
     } finally {
       setIsSubmitting(false);
     }
@@ -169,17 +188,32 @@ function CreateOwnerDialog({ onCreate }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar
-        </Button>
+        {isEdit ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-muted"
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Adicionar proprietário</DialogTitle>
+            <DialogTitle>
+              {isEdit ? "Editar proprietário" : "Adicionar proprietário"}
+            </DialogTitle>
             <DialogDescription>
-              Cadastre um novo proprietário para associar imóveis e contratos.
+              {isEdit
+                ? "Altere os dados do proprietário."
+                : "Cadastre um novo proprietário para associar imóveis e contratos."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -197,7 +231,7 @@ function CreateOwnerDialog({ onCreate }) {
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Criando..." : "Criar"}
+              {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
         </form>

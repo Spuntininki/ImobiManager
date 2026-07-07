@@ -1,4 +1,4 @@
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -132,6 +132,20 @@ export function Contracts() {
     }
   }
 
+  async function handleUpdate(contractId, payload, onClose) {
+    try {
+      const resp = await api.patch(`/contracts/${contractId}`, payload);
+      setContracts((prev) =>
+        prev.map((contract) =>
+          contract.id === contractId ? resp.data : contract
+        )
+      );
+      onClose();
+    } catch {
+      setError("Não foi possível atualizar o contrato.");
+    }
+  }
+
   async function handleDelete(contractId) {
     if (!confirm("Excluir este contrato? Esta ação não pode ser desfeita.")) {
       return;
@@ -194,8 +208,8 @@ export function Contracts() {
       {selectedOwnerId !== null && owners.length > 0 && (
         <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Contratos</h2>
-          <CreateContractDialog
-            onCreate={handleCreate}
+          <ContractDialog
+            onSubmit={handleCreate}
             renters={renters}
             addresses={addresses}
           />
@@ -271,6 +285,14 @@ export function Contracts() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
+                        <ContractDialog
+                          contract={contract}
+                          renters={renters}
+                          addresses={addresses}
+                          onSubmit={(payload, onClose) =>
+                            handleUpdate(contract.id, payload, onClose)
+                          }
+                        />
                         <Button
                           variant="ghost"
                           size="icon"
@@ -293,14 +315,27 @@ export function Contracts() {
   );
 }
 
-function CreateContractDialog({ onCreate, renters, addresses }) {
+function ContractDialog({ contract, renters, addresses, onSubmit }) {
+  const isEdit = contract !== undefined;
+  const initialForm = isEdit
+    ? {
+        renter_id: String(contract.renter_id),
+        address_id: String(contract.address_id),
+        start_date: contract.start_date.split("T")[0],
+        end_date: contract.end_date.split("T")[0],
+        monthly_revenue: String(contract.monthly_revenue),
+        deposit_value: String(contract.deposit_value),
+        deposit_months: String(contract.deposit_months),
+        status: contract.status,
+      }
+    : EMPTY_FORM;
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleClose() {
     setOpen(false);
-    setForm(EMPTY_FORM);
+    setForm(initialForm);
   }
 
   function updateField(field, value) {
@@ -318,9 +353,12 @@ function CreateContractDialog({ onCreate, renters, addresses }) {
       deposit_value: form.deposit_value,
       deposit_months: Number(form.deposit_months),
     };
+    if (isEdit) {
+      payload.status = form.status;
+    }
     setIsSubmitting(true);
     try {
-      await onCreate(payload, handleClose);
+      await onSubmit(payload, handleClose);
     } finally {
       setIsSubmitting(false);
     }
@@ -338,17 +376,32 @@ function CreateContractDialog({ onCreate, renters, addresses }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar
-        </Button>
+        {isEdit ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-muted"
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Adicionar contrato</DialogTitle>
+            <DialogTitle>
+              {isEdit ? "Editar contrato" : "Adicionar contrato"}
+            </DialogTitle>
             <DialogDescription>
-              Cadastre um novo contrato de locação.
+              {isEdit
+                ? "Altere os dados do contrato de locação."
+                : "Cadastre um novo contrato de locação."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -464,10 +517,31 @@ function CreateContractDialog({ onCreate, renters, addresses }) {
                 />
               </div>
             </div>
+
+            {isEdit && (
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(value) => updateField("status", value)}
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting || !canSubmit}>
-              {isSubmitting ? "Criando..." : "Criar"}
+              {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
         </form>

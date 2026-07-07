@@ -1,4 +1,4 @@
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -98,6 +98,18 @@ export function Properties() {
     }
   }
 
+  async function handleUpdate(addressId, payload, onClose) {
+    try {
+      const resp = await api.put(`/addresses/${addressId}`, payload);
+      setAddresses((prev) =>
+        prev.map((address) => (address.id === addressId ? resp.data : address))
+      );
+      onClose();
+    } catch {
+      setError("Não foi possível atualizar o imóvel.");
+    }
+  }
+
   async function handleDelete(addressId) {
     if (!confirm("Excluir este imóvel? Esta ação não pode ser desfeita.")) {
       return;
@@ -160,7 +172,7 @@ export function Properties() {
       {selectedOwnerId !== null && owners.length > 0 && (
         <div className="mt-8 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Imóveis</h2>
-          <CreateAddressDialog onCreate={handleCreate} />
+          <AddressDialog onSubmit={handleCreate} />
         </div>
       )}
 
@@ -220,6 +232,12 @@ export function Properties() {
                       {PROPERTY_TYPE_LABELS[address.type] ?? address.type}
                     </TableCell>
                     <TableCell className="text-right">
+                      <AddressDialog
+                        address={address}
+                        onSubmit={(payload, onClose) =>
+                          handleUpdate(address.id, payload, onClose)
+                        }
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
@@ -241,14 +259,27 @@ export function Properties() {
   );
 }
 
-function CreateAddressDialog({ onCreate }) {
+function AddressDialog({ address, onSubmit }) {
+  const isEdit = address !== undefined;
+  const initialForm = isEdit
+    ? {
+        street_name: address.street_name,
+        number: address.number,
+        complement: address.complement ?? "",
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+        zip_code: address.zip_code,
+        type: address.type,
+      }
+    : EMPTY_FORM;
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleClose() {
     setOpen(false);
-    setForm(EMPTY_FORM);
+    setForm(initialForm);
   }
 
   function updateField(field, value) {
@@ -270,7 +301,7 @@ function CreateAddressDialog({ onCreate }) {
     };
     setIsSubmitting(true);
     try {
-      await onCreate(payload, handleClose);
+      await onSubmit(payload, handleClose);
     } finally {
       setIsSubmitting(false);
     }
@@ -279,17 +310,32 @@ function CreateAddressDialog({ onCreate }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar
-        </Button>
+        {isEdit ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-muted"
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Editar</span>
+          </Button>
+        ) : (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Adicionar imóvel</DialogTitle>
+            <DialogTitle>
+              {isEdit ? "Editar imóvel" : "Adicionar imóvel"}
+            </DialogTitle>
             <DialogDescription>
-              Cadastre o endereço de uma propriedade.
+              {isEdit
+                ? "Altere os dados do endereço."
+                : "Cadastre o endereço de uma propriedade."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -399,7 +445,7 @@ function CreateAddressDialog({ onCreate }) {
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Criando..." : "Criar"}
+              {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
         </form>
