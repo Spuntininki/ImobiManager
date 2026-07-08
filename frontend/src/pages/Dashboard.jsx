@@ -281,7 +281,7 @@ export function Dashboard() {
                   <BarChart
                     data={chartData}
                     margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
-                    barSize={32}
+                    maxBarSize={48}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis
