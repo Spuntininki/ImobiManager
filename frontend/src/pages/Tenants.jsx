@@ -45,6 +45,8 @@ const DOCUMENT_TYPE_LABELS = {
   CNPJ: "CNPJ",
 };
 
+let documentTempId = 0;
+
 const EMPTY_DOCUMENT = {
   document_type: "RG",
   document: "",
@@ -358,10 +360,13 @@ function RenterDialog({ renter, onSubmit }) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function addDocument() {
+  function addDocument(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    documentTempId += 1;
     setDocuments((prev) => [
       ...prev,
-      { ...EMPTY_DOCUMENT, id: undefined, isDeleted: false },
+      { ...EMPTY_DOCUMENT, id: `temp-${documentTempId}`, isDeleted: false },
     ]);
   }
 
@@ -522,7 +527,7 @@ function RenterDialog({ renter, onSubmit }) {
                     const actualIndex = documents.findIndex((d) => d === doc);
                     return (
                       <div
-                        key={actualIndex}
+                        key={doc.id}
                         className="flex items-start gap-2"
                       >
                         <Select

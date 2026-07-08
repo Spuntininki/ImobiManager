@@ -36,6 +36,8 @@ const DOCUMENT_TYPE_LABELS = {
   CNPJ: "CNPJ",
 };
 
+let documentTempId = 0;
+
 const EMPTY_DOCUMENT = {
   document_type: "RG",
   document: "",
@@ -263,10 +265,13 @@ function OwnerDialog({ owner, onSubmit }) {
     setDialogError("");
   }
 
-  function addDocument() {
+  function addDocument(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    documentTempId += 1;
     setDocuments((prev) => [
       ...prev,
-      { ...EMPTY_DOCUMENT, id: undefined, isDeleted: false },
+      { ...EMPTY_DOCUMENT, id: `temp-${documentTempId}`, isDeleted: false },
     ]);
   }
 
@@ -387,7 +392,7 @@ function OwnerDialog({ owner, onSubmit }) {
                     );
                     return (
                       <div
-                        key={actualIndex}
+                        key={doc.id}
                         className="flex items-start gap-2"
                       >
                         <Select
