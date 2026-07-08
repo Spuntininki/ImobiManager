@@ -6,9 +6,12 @@ import api from "@/lib/api";
 import {
   formatDocument,
   formatPhone,
+  getDocumentMaxLength,
+  limitRawLength,
   parseDocument,
   parseEmail,
   parsePhone,
+  PHONE_MAX_DIGITS,
   validateDocument,
   validateEmail,
   validateName,
@@ -564,6 +567,7 @@ function RenterDialog({ renter, onSubmit }) {
                 placeholder="(11) 99999-9999"
                 value={form.primary_contact}
                 onChange={(e) => updateField("primary_contact", e.target.value)}
+                onBeforeInput={limitRawLength(parsePhone, PHONE_MAX_DIGITS)}
                 disabled={isSubmitting}
                 inputMode="tel"
                 aria-invalid={!!fieldErrors.primary_contact}
@@ -584,6 +588,7 @@ function RenterDialog({ renter, onSubmit }) {
                 placeholder="(11) 98888-8888"
                 value={form.secondary_contact}
                 onChange={(e) => updateField("secondary_contact", e.target.value)}
+                onBeforeInput={limitRawLength(parsePhone, PHONE_MAX_DIGITS)}
                 disabled={isSubmitting}
                 inputMode="tel"
                 aria-invalid={!!fieldErrors.secondary_contact}
@@ -679,6 +684,10 @@ function RenterDialog({ renter, onSubmit }) {
                             onChange={(e) =>
                               updateDocument(actualIndex, "document", e.target.value)
                             }
+                            onBeforeInput={limitRawLength(
+                              parseDocument,
+                              getDocumentMaxLength(doc.document_type)
+                            )}
                             disabled={isSubmitting}
                             aria-invalid={!!docError}
                           />

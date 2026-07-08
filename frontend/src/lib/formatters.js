@@ -1,8 +1,8 @@
-const PHONE_MAX_DIGITS = 11;
-const CPF_LENGTH = 11;
-const CNPJ_LENGTH = 14;
+export const PHONE_MAX_DIGITS = 11;
+export const CPF_LENGTH = 11;
+export const CNPJ_LENGTH = 14;
 const RG_MIN_LENGTH = 4;
-const RG_MAX_LENGTH = 14;
+export const RG_MAX_LENGTH = 14;
 const NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;
 
@@ -110,6 +110,26 @@ function isValidCNPJ(cnpj) {
   }
   let secondDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
   return secondDigit === parseInt(cnpj[13], 10);
+}
+
+export function getDocumentMaxLength(type) {
+  if (type === "CPF") return CPF_LENGTH;
+  if (type === "CNPJ") return CNPJ_LENGTH;
+  return RG_MAX_LENGTH;
+}
+
+export function limitRawLength(parseFn, maxLength) {
+  return (event) => {
+    if (event.inputType === "deleteContentBackward" || !event.data) return;
+    const { selectionStart, selectionEnd, value } = event.target;
+    const nextValue =
+      value.slice(0, selectionStart ?? 0) +
+      event.data +
+      value.slice(selectionEnd ?? value.length);
+    if (parseFn(nextValue).length > maxLength) {
+      event.preventDefault();
+    }
+  };
 }
 
 export function validateDocument(type, value) {

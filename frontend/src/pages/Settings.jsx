@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import {
   formatDocument,
+  getDocumentMaxLength,
+  limitRawLength,
   parseDocument,
   validateDocument,
   validateName,
@@ -493,6 +495,10 @@ function OwnerDialog({ owner, onSubmit }) {
                             onChange={(e) =>
                               updateDocument(actualIndex, "document", e.target.value)
                             }
+                            onBeforeInput={limitRawLength(
+                              parseDocument,
+                              getDocumentMaxLength(doc.document_type)
+                            )}
                             disabled={isSubmitting}
                             aria-invalid={!!docError}
                           />
