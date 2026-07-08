@@ -3,6 +3,17 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import api from "@/lib/api";
+import {
+  formatDocument,
+  formatPhone,
+  parseDocument,
+  parseEmail,
+  parsePhone,
+  validateDocument,
+  validateEmail,
+  validateName,
+  validatePhone,
+} from "@/lib/formatters";
 import { useOwners } from "@/lib/useOwners";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,7 +97,7 @@ export function Tenants() {
     };
   }, [selectedOwnerId]);
 
-  async function handleCreate(payload, documents, onClose) {
+  async function handleCreate(payload, documents, _initialDocuments, onClose) {
     try {
       const resp = await api.post(
         `/owners/${selectedOwnerId}/renters`,
@@ -258,8 +269,12 @@ export function Tenants() {
                 renters.map((renter) => (
                   <TableRow key={renter.id}>
                     <TableCell className="font-medium">{renter.name}</TableCell>
-                    <TableCell>{renter.primary_contact}</TableCell>
-                    <TableCell>{renter.secondary_contact ?? "—"}</TableCell>
+                    <TableCell>{formatPhone(renter.primary_contact)}</TableCell>
+                    <TableCell>
+                      {renter.secondary_contact
+                        ? formatPhone(renter.secondary_contact)
+                        : "—"}
+                    </TableCell>
                     <TableCell>{renter.email ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -319,6 +334,13 @@ function RenterDialog({ renter, onSubmit }) {
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogError, setDialogError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({
+    name: "",
+    primary_contact: "",
+    secondary_contact: "",
+    email: "",
+  });
+  const [documentErrors, setDocumentErrors] = useState({});
 
   useEffect(() => {
     if (!open || !isEdit) {
@@ -355,10 +377,23 @@ function RenterDialog({ renter, onSubmit }) {
     setDocuments([]);
     setInitialDocuments([]);
     setDialogError("");
+    setFieldErrors({
+      name: "",
+      primary_contact: "",
+      secondary_contact: "",
+      email: "",
+    });
+    setDocumentErrors({});
   }
 
   function updateField(field, value) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      if (field === "primary_contact" || field === "secondary_contact") {
+        return { ...prev, [field]: formatPhone(value) };
+      }
+      return { ...prev, [field]: value };
+    });
+    setFieldErrors((prev) => ({ ...prev, [field]: "" }));
   }
 
   function addDocument(event) {
@@ -373,8 +408,27 @@ function RenterDialog({ renter, onSubmit }) {
 
   function updateDocument(index, field, value) {
     setDocuments((prev) =>
-      prev.map((doc, i) => (i === index ? { ...doc, [field]: value } : doc))
+      prev.map((doc, i) => {
+        if (i !== index) return doc;
+        if (field === "document") {
+          return { ...doc, document: formatDocument(doc.document_type, value) };
+        }
+        if (field === "document_type") {
+          return {
+            ...doc,
+            document_type: value,
+            document: formatDocument(value, doc.document),
+          };
+        }
+        return { ...doc, [field]: value };
+      })
     );
+    setDocumentErrors((prev) => {
+      const doc = documents[index];
+      if (!doc) return prev;
+      const key = doc.id ?? doc._tempId;
+      return { ...prev, [key]: "" };
+    });
   }
 
   function removeDocument(index) {
@@ -385,23 +439,61 @@ function RenterDialog({ renter, onSubmit }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const payload = {
-      name: form.name.trim(),
-      primary_contact: form.primary_contact.trim(),
-      secondary_contact: form.secondary_contact.trim() || null,
-      email: form.email.trim() || null,
+
+    const errors = {
+      name: validateName(form.name),
+      primary_contact: validatePhone(form.primary_contact),
+      secondary_contact: validatePhone(form.secondary_contact, {
+        required: false,
+      }),
+      email: validateEmail(form.email),
     };
 
     const visibleDocs = documents.filter((d) => !d.isDeleted);
     const types = visibleDocs.map((d) => d.document_type);
     if (new Set(types).size !== types.length) {
       setDialogError("Não é permitido mais de um documento do mesmo tipo.");
+      setFieldErrors(errors);
       return;
     }
 
+    const docErrors = {};
+    for (const doc of visibleDocs) {
+      const error = validateDocument(doc.document_type, doc.document);
+      if (error) {
+        docErrors[doc.id ?? doc._tempId] = error;
+      }
+    }
+
+    const hasFieldErrors = Object.values(errors).some(Boolean);
+    if (hasFieldErrors || Object.keys(docErrors).length > 0) {
+      setDialogError("Corrija os campos destacados antes de salvar.");
+      setFieldErrors(errors);
+      setDocumentErrors(docErrors);
+      return;
+    }
+
+    setDialogError("");
+    setFieldErrors(errors);
+    setDocumentErrors({});
+
+    const payload = {
+      name: form.name.trim(),
+      primary_contact: parsePhone(form.primary_contact),
+      secondary_contact: form.secondary_contact
+        ? parsePhone(form.secondary_contact)
+        : null,
+      email: parseEmail(form.email) || null,
+    };
+
+    const rawDocuments = documents.map((doc) => ({
+      ...doc,
+      document: parseDocument(doc.document),
+    }));
+
     setIsSubmitting(true);
     try {
-      await onSubmit(payload, documents, initialDocuments, handleClose);
+      await onSubmit(payload, rawDocuments, initialDocuments, handleClose);
     } finally {
       setIsSubmitting(false);
     }
@@ -456,9 +548,13 @@ function RenterDialog({ renter, onSubmit }) {
                 value={form.name}
                 onChange={(e) => updateField("name", e.target.value)}
                 disabled={isSubmitting}
-                required
+                maxLength={100}
+                aria-invalid={!!fieldErrors.name}
                 autoFocus
               />
+              {fieldErrors.name && (
+                <p className="text-xs text-destructive">{fieldErrors.name}</p>
+              )}
             </div>
 
             <div className="grid gap-2">
@@ -469,8 +565,14 @@ function RenterDialog({ renter, onSubmit }) {
                 value={form.primary_contact}
                 onChange={(e) => updateField("primary_contact", e.target.value)}
                 disabled={isSubmitting}
-                required
+                inputMode="tel"
+                aria-invalid={!!fieldErrors.primary_contact}
               />
+              {fieldErrors.primary_contact && (
+                <p className="text-xs text-destructive">
+                  {fieldErrors.primary_contact}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">
@@ -483,7 +585,14 @@ function RenterDialog({ renter, onSubmit }) {
                 value={form.secondary_contact}
                 onChange={(e) => updateField("secondary_contact", e.target.value)}
                 disabled={isSubmitting}
+                inputMode="tel"
+                aria-invalid={!!fieldErrors.secondary_contact}
               />
+              {fieldErrors.secondary_contact && (
+                <p className="text-xs text-destructive">
+                  {fieldErrors.secondary_contact}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">
@@ -495,7 +604,12 @@ function RenterDialog({ renter, onSubmit }) {
                 value={form.email}
                 onChange={(e) => updateField("email", e.target.value)}
                 disabled={isSubmitting}
+                maxLength={254}
+                aria-invalid={!!fieldErrors.email}
               />
+              {fieldErrors.email && (
+                <p className="text-xs text-destructive">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -526,56 +640,63 @@ function RenterDialog({ renter, onSubmit }) {
                 <div className="space-y-2">
                   {visibleDocuments.map((doc) => {
                     const actualIndex = documents.findIndex((d) => d === doc);
+                    const docError = documentErrors[doc.id ?? doc._tempId];
                     return (
                       <div
                         key={doc.id ?? doc._tempId}
-                        className="flex items-start gap-2"
+                        className="space-y-1"
                       >
-                        <Select
-                          value={doc.document_type}
-                          onValueChange={(value) =>
-                            updateDocument(actualIndex, "document_type", value)
-                          }
-                          disabled={isSubmitting}
-                        >
-                          <SelectTrigger className="w-28">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(DOCUMENT_TYPE_LABELS).map(
-                              ([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          placeholder={
-                            doc.document_type === "CNPJ"
-                              ? "00.000.000/0000-00"
-                              : doc.document_type === "CPF"
-                                ? "000.000.000-00"
-                                : "00.000.000-0"
-                          }
-                          value={doc.document}
-                          onChange={(e) =>
-                            updateDocument(actualIndex, "document", e.target.value)
-                          }
-                          disabled={isSubmitting}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => removeDocument(actualIndex)}
-                          disabled={isSubmitting}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remover</span>
-                        </Button>
+                        <div className="flex items-start gap-2">
+                          <Select
+                            value={doc.document_type}
+                            onValueChange={(value) =>
+                              updateDocument(actualIndex, "document_type", value)
+                            }
+                            disabled={isSubmitting}
+                          >
+                            <SelectTrigger className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(DOCUMENT_TYPE_LABELS).map(
+                                ([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            placeholder={
+                              doc.document_type === "CNPJ"
+                                ? "00.000.000/0000-00"
+                                : doc.document_type === "CPF"
+                                  ? "000.000.000-00"
+                                  : "00.000.000-0"
+                            }
+                            value={doc.document}
+                            onChange={(e) =>
+                              updateDocument(actualIndex, "document", e.target.value)
+                            }
+                            disabled={isSubmitting}
+                            aria-invalid={!!docError}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => removeDocument(actualIndex)}
+                            disabled={isSubmitting}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Remover</span>
+                          </Button>
+                        </div>
+                        {docError && (
+                          <p className="text-xs text-destructive">{docError}</p>
+                        )}
                       </div>
                     );
                   })}

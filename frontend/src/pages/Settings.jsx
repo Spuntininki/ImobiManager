@@ -2,6 +2,12 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import api from "@/lib/api";
+import {
+  formatDocument,
+  parseDocument,
+  validateDocument,
+  validateName,
+} from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,7 +71,7 @@ export function Settings() {
     fetchOwners();
   }, []);
 
-  async function handleCreate(name, documents, onClose) {
+  async function handleCreate(name, documents, _initialDocuments, onClose) {
     try {
       const resp = await api.post("/owners", { name });
       const ownerId = resp.data.id;
@@ -228,6 +234,8 @@ function OwnerDialog({ owner, onSubmit }) {
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogError, setDialogError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({ name: "" });
+  const [documentErrors, setDocumentErrors] = useState({});
 
   useEffect(() => {
     if (!open || !isEdit) {
@@ -264,6 +272,8 @@ function OwnerDialog({ owner, onSubmit }) {
     setDocuments([]);
     setInitialDocuments([]);
     setDialogError("");
+    setFieldErrors({ name: "" });
+    setDocumentErrors({});
   }
 
   function addDocument(event) {
@@ -278,8 +288,27 @@ function OwnerDialog({ owner, onSubmit }) {
 
   function updateDocument(index, field, value) {
     setDocuments((prev) =>
-      prev.map((doc, i) => (i === index ? { ...doc, [field]: value } : doc))
+      prev.map((doc, i) => {
+        if (i !== index) return doc;
+        if (field === "document") {
+          return { ...doc, document: formatDocument(doc.document_type, value) };
+        }
+        if (field === "document_type") {
+          return {
+            ...doc,
+            document_type: value,
+            document: formatDocument(value, doc.document),
+          };
+        }
+        return { ...doc, [field]: value };
+      })
     );
+    setDocumentErrors((prev) => {
+      const doc = documents[index];
+      if (!doc) return prev;
+      const key = doc.id ?? doc._tempId;
+      return { ...prev, [key]: "" };
+    });
   }
 
   function removeDocument(index) {
@@ -290,18 +319,43 @@ function OwnerDialog({ owner, onSubmit }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!name.trim()) return;
 
+    const nameError = validateName(name);
     const visibleDocs = documents.filter((d) => !d.isDeleted);
     const types = visibleDocs.map((d) => d.document_type);
     if (new Set(types).size !== types.length) {
       setDialogError("Não é permitido mais de um documento do mesmo tipo.");
+      setFieldErrors({ name: nameError });
       return;
     }
 
+    const docErrors = {};
+    for (const doc of visibleDocs) {
+      const error = validateDocument(doc.document_type, doc.document);
+      if (error) {
+        docErrors[doc.id ?? doc._tempId] = error;
+      }
+    }
+
+    if (nameError || Object.keys(docErrors).length > 0) {
+      setDialogError("Corrija os campos destacados antes de salvar.");
+      setFieldErrors({ name: nameError });
+      setDocumentErrors(docErrors);
+      return;
+    }
+
+    setDialogError("");
+    setFieldErrors({ name: "" });
+    setDocumentErrors({});
+
+    const rawDocuments = documents.map((doc) => ({
+      ...doc,
+      document: parseDocument(doc.document),
+    }));
+
     setIsSubmitting(true);
     try {
-      await onSubmit(name.trim(), documents, initialDocuments, handleClose);
+      await onSubmit(name.trim(), rawDocuments, initialDocuments, handleClose);
     } finally {
       setIsSubmitting(false);
     }
@@ -354,11 +408,20 @@ function OwnerDialog({ owner, onSubmit }) {
                 id="name"
                 placeholder="João Silva"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (fieldErrors.name) {
+                    setFieldErrors((prev) => ({ ...prev, name: "" }));
+                  }
+                }}
                 disabled={isSubmitting}
-                required
+                maxLength={100}
+                aria-invalid={!!fieldErrors.name}
                 autoFocus
               />
+              {fieldErrors.name && (
+                <p className="text-xs text-destructive">{fieldErrors.name}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -391,56 +454,63 @@ function OwnerDialog({ owner, onSubmit }) {
                     const actualIndex = documents.findIndex(
                       (d) => d === doc
                     );
+                    const docError = documentErrors[doc.id ?? doc._tempId];
                     return (
                       <div
                         key={doc.id ?? doc._tempId}
-                        className="flex items-start gap-2"
+                        className="space-y-1"
                       >
-                        <Select
-                          value={doc.document_type}
-                          onValueChange={(value) =>
-                            updateDocument(actualIndex, "document_type", value)
-                          }
-                          disabled={isSubmitting}
-                        >
-                          <SelectTrigger className="w-28">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(DOCUMENT_TYPE_LABELS).map(
-                              ([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                  {label}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          placeholder={
-                            doc.document_type === "CNPJ"
-                              ? "00.000.000/0000-00"
-                              : doc.document_type === "CPF"
-                                ? "000.000.000-00"
-                                : "00.000.000-0"
-                          }
-                          value={doc.document}
-                          onChange={(e) =>
-                            updateDocument(actualIndex, "document", e.target.value)
-                          }
-                          disabled={isSubmitting}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => removeDocument(actualIndex)}
-                          disabled={isSubmitting}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remover</span>
-                        </Button>
+                        <div className="flex items-start gap-2">
+                          <Select
+                            value={doc.document_type}
+                            onValueChange={(value) =>
+                              updateDocument(actualIndex, "document_type", value)
+                            }
+                            disabled={isSubmitting}
+                          >
+                            <SelectTrigger className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(DOCUMENT_TYPE_LABELS).map(
+                                ([value, label]) => (
+                                  <SelectItem key={value} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            placeholder={
+                              doc.document_type === "CNPJ"
+                                ? "00.000.000/0000-00"
+                                : doc.document_type === "CPF"
+                                  ? "000.000.000-00"
+                                  : "00.000.000-0"
+                            }
+                            value={doc.document}
+                            onChange={(e) =>
+                              updateDocument(actualIndex, "document", e.target.value)
+                            }
+                            disabled={isSubmitting}
+                            aria-invalid={!!docError}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => removeDocument(actualIndex)}
+                            disabled={isSubmitting}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Remover</span>
+                          </Button>
+                        </div>
+                        {docError && (
+                          <p className="text-xs text-destructive">{docError}</p>
+                        )}
                       </div>
                     );
                   })}
