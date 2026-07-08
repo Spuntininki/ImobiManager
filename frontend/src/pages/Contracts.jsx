@@ -52,6 +52,7 @@ const EMPTY_FORM = {
   monthly_revenue: "",
   deposit_value: "",
   deposit_months: "",
+  payment_day: "",
 };
 
 function formatIsoDate(isoDateTime) {
@@ -230,6 +231,7 @@ export function Contracts() {
                 <TableHead>Período</TableHead>
                 <TableHead>Aluguel</TableHead>
                 <TableHead>Depósito</TableHead>
+                <TableHead>Dia de pagamento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24 text-right"></TableHead>
               </TableRow>
@@ -237,7 +239,7 @@ export function Contracts() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <div className="flex items-center justify-center py-12 text-muted-foreground">
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Carregando...
@@ -247,7 +249,7 @@ export function Contracts() {
               ) : contracts.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="py-8 text-center text-muted-foreground"
                   >
                     Nenhum contrato cadastrado para este proprietário. Clique em
@@ -279,6 +281,7 @@ export function Contracts() {
                         {CURRENCY.format(Number(contract.deposit_value))} (
                         {contract.deposit_months}x)
                       </TableCell>
+                      <TableCell>{contract.payment_day}</TableCell>
                       <TableCell>
                         <span className="rounded-md border bg-muted px-2 py-1 text-xs font-medium">
                           {STATUS_LABELS[contract.status] ?? contract.status}
@@ -328,6 +331,7 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
         monthly_revenue: String(contract.monthly_revenue),
         deposit_value: String(contract.deposit_value),
         deposit_months: String(contract.deposit_months),
+        payment_day: String(contract.payment_day),
         status: contract.status,
       }
     : EMPTY_FORM;
@@ -354,6 +358,7 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
       monthly_revenue: form.monthly_revenue,
       deposit_value: form.deposit_value,
       deposit_months: Number(form.deposit_months),
+      payment_day: Number(form.payment_day),
     };
     if (isEdit) {
       payload.status = form.status;
@@ -373,7 +378,8 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
     form.end_date &&
     form.monthly_revenue &&
     form.deposit_value &&
-    form.deposit_months;
+    form.deposit_months &&
+    form.payment_day !== "";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -473,7 +479,7 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="grid gap-2">
                 <Label htmlFor="monthly_revenue">Aluguel mensal</Label>
                 <Input
@@ -514,6 +520,22 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
                   placeholder="2"
                   value={form.deposit_months}
                   onChange={(e) => updateField("deposit_months", e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="payment_day">Dia de pagamento</Label>
+                <Input
+                  id="payment_day"
+                  type="number"
+                  min="1"
+                  max="31"
+                  step="1"
+                  placeholder="5"
+                  value={form.payment_day}
+                  onChange={(e) => updateField("payment_day", e.target.value)}
                   disabled={isSubmitting}
                   required
                 />
