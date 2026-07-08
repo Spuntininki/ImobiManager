@@ -24,6 +24,7 @@ class Contract(Base):
     monthly_revenue: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     deposit_value: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     deposit_months: Mapped[int] = mapped_column(Integer, nullable=False)
+    payment_day: Mapped[int] = mapped_column(Integer, nullable=False)
     generation_date: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

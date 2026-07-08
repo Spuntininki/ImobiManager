@@ -108,7 +108,7 @@ Table contracts {
   monthly_revenue decimal [note: 'Current monthly rent amount.']
   deposit_value decimal [note: 'Total security deposit amount.']
   deposit_months int [note: 'Number of monthly rents equivalent to the security deposit.']
-  payment_day int [note: 'Day of the month when rent is due.']
+  payment_day int [not null, note: 'Day of the month when rent is due.']
   generation_date timestamp [note: 'When the contract document was generated.']
   signed_date timestamp [note: 'When the contract was signed by the parties.']
   cancel_date timestamp [note: 'When the contract was cancelled or terminated.']

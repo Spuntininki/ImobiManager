@@ -79,6 +79,7 @@ def _valid_contract_payload(renter_id: int, address_id: int) -> dict:
         "monthly_revenue": "1500.50",
         "deposit_value": "1500.00",
         "deposit_months": 1,
+        "payment_day": 5,
     }
 
 
@@ -162,6 +163,7 @@ async def test_create_contract(client: AsyncClient, db_session: AsyncSession) ->
     # Decimal round-trip
     assert data["monthly_revenue"] == "1500.50"
     assert data["deposit_value"] == "1500.00"
+    assert data["payment_day"] == 5
 
 
 async def test_create_contract_missing_required_field(
@@ -172,6 +174,20 @@ async def test_create_contract_missing_required_field(
     owner_id, renter_id, address_id = await _setup_owner_with_renter_and_address(client, headers)
     payload = _valid_contract_payload(renter_id, address_id)
     payload.pop("monthly_revenue")
+    response = await client.post(
+        f"/api/v1/owners/{owner_id}/contracts", json=payload, headers=headers
+    )
+    assert response.status_code == 422
+
+
+async def test_create_contract_invalid_payment_day_422(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    await _create_user(db_session)
+    headers = await _auth_headers(client)
+    owner_id, renter_id, address_id = await _setup_owner_with_renter_and_address(client, headers)
+    payload = _valid_contract_payload(renter_id, address_id)
+    payload["payment_day"] = 32
     response = await client.post(
         f"/api/v1/owners/{owner_id}/contracts", json=payload, headers=headers
     )
@@ -301,6 +317,7 @@ async def test_get_contract_not_linked_to_managed_owner_404(
         monthly_revenue=Decimal("1000.00"),
         deposit_value=Decimal("0.00"),
         deposit_months=0,
+        payment_day=10,
         status="PENDING",
     )
     db_session.add(contract)
@@ -487,6 +504,7 @@ async def test_delete_contract_not_linked_to_managed_owner_404(
         monthly_revenue=Decimal("1000.00"),
         deposit_value=Decimal("0.00"),
         deposit_months=0,
+        payment_day=10,
         status="PENDING",
     )
     db_session.add(contract)

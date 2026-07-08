@@ -3,7 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import ContractStatus
 
@@ -24,6 +24,7 @@ class ContractCreate(BaseModel):
     monthly_revenue: Decimal
     deposit_value: Decimal
     deposit_months: int
+    payment_day: int = Field(..., ge=1, le=31)
 
 
 class ContractUpdate(BaseModel):
@@ -44,6 +45,7 @@ class ContractUpdate(BaseModel):
     monthly_revenue: Decimal | None = None
     deposit_value: Decimal | None = None
     deposit_months: int | None = None
+    payment_day: int | None = Field(default=None, ge=1, le=31)
     status: ContractStatus | None = None
     signed_date: datetime | None = None
     cancel_date: datetime | None = None
@@ -63,6 +65,7 @@ class ContractRead(BaseModel):
     monthly_revenue: Decimal
     deposit_value: Decimal
     deposit_months: int
+    payment_day: int
     generation_date: datetime
     signed_date: datetime | None
     cancel_date: datetime | None

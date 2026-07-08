@@ -63,6 +63,7 @@ async def create_contract(
         monthly_revenue=payload.monthly_revenue,
         deposit_value=payload.deposit_value,
         deposit_months=payload.deposit_months,
+        payment_day=payload.payment_day,
         status=ContractStatus.PENDING,
     )
     session.add(contract)
