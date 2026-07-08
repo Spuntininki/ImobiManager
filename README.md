@@ -20,7 +20,7 @@ ImobiManager/
 
 ## Prerequisites
 
-- Node.js (for the frontend)
+- Node.js 26.1.0 (for the frontend)
 - Python 3.14 and [UV](https://docs.astral.sh/uv/) (for the backend)
 - Docker and Docker Compose (for Postgres)
 
