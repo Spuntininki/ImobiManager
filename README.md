@@ -1,6 +1,7 @@
 # ImobiManager
 
-Real estate rental management system. Monorepo with a React/Vite frontend and a FastAPI backend, backed by PostgreSQL.
+Real estate rental management system. Monorepo with a React/Vite frontend and a FastAPI backend, backed by PostgreSQL. 
+Currently under active development, with the core property, tenant, and contract management flows already implemented in both frontend and backend.
 
 ## Architecture
 
