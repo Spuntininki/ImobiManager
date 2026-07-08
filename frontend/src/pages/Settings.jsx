@@ -94,9 +94,10 @@ export function Settings() {
       );
 
       for (const doc of documents) {
-        if (doc.isDeleted && doc.id) {
+        const isExisting = typeof doc.id === "number";
+        if (doc.isDeleted && isExisting) {
           await api.delete(`/owners/${ownerId}/documents/${doc.id}`);
-        } else if (doc.id) {
+        } else if (isExisting) {
           const initial = initialById[doc.id];
           if (
             initial &&
@@ -271,7 +272,7 @@ function OwnerDialog({ owner, onSubmit }) {
     documentTempId += 1;
     setDocuments((prev) => [
       ...prev,
-      { ...EMPTY_DOCUMENT, id: `temp-${documentTempId}`, isDeleted: false },
+      { ...EMPTY_DOCUMENT, _tempId: `temp-${documentTempId}`, isDeleted: false },
     ]);
   }
 
@@ -392,7 +393,7 @@ function OwnerDialog({ owner, onSubmit }) {
                     );
                     return (
                       <div
-                        key={doc.id}
+                        key={doc.id ?? doc._tempId}
                         className="flex items-start gap-2"
                       >
                         <Select
