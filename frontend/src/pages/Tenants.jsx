@@ -1,4 +1,4 @@
-import { FileText, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -39,6 +39,17 @@ const EMPTY_FORM = {
   email: "",
 };
 
+const DOCUMENT_TYPE_LABELS = {
+  RG: "RG",
+  CPF: "CPF",
+  CNPJ: "CNPJ",
+};
+
+const EMPTY_DOCUMENT = {
+  document_type: "RG",
+  document: "",
+};
+
 export function Tenants() {
   const { owners, isLoading: ownersLoading, error: ownersError } = useOwners();
   const [selectedOwnerId, setSelectedOwnerId] = useState(null);
@@ -73,12 +84,20 @@ export function Tenants() {
     };
   }, [selectedOwnerId]);
 
-  async function handleCreate(payload, onClose) {
+  async function handleCreate(payload, documents, onClose) {
     try {
       const resp = await api.post(
         `/owners/${selectedOwnerId}/renters`,
         payload
       );
+      const renterId = resp.data.id;
+      for (const doc of documents) {
+        if (doc.isDeleted) continue;
+        await api.post(`/renters/${renterId}/documents`, {
+          document_type: doc.document_type,
+          document: doc.document.trim(),
+        });
+      }
       setRenters((prev) => [...prev, resp.data]);
       onClose();
     } catch {
@@ -86,15 +105,47 @@ export function Tenants() {
     }
   }
 
-  async function handleUpdate(renterId, payload, onClose) {
+  async function handleUpdate(renterId, payload, documents, initialDocuments, onClose) {
     try {
       const resp = await api.put(`/renters/${renterId}`, payload);
+
+      const initialById = Object.fromEntries(
+        initialDocuments.map((d) => [d.id, d])
+      );
+
+      for (const doc of documents) {
+        if (doc.isDeleted && doc.id) {
+          await api.delete(`/renters/${renterId}/documents/${doc.id}`);
+        } else if (doc.id) {
+          const initial = initialById[doc.id];
+          if (
+            initial &&
+            (initial.document_type !== doc.document_type ||
+              initial.document !== doc.document.trim())
+          ) {
+            await api.put(`/renters/${renterId}/documents/${doc.id}`, {
+              document_type: doc.document_type,
+              document: doc.document.trim(),
+            });
+          }
+        } else if (!doc.isDeleted) {
+          await api.post(`/renters/${renterId}/documents`, {
+            document_type: doc.document_type,
+            document: doc.document.trim(),
+          });
+        }
+      }
+
       setRenters((prev) =>
         prev.map((renter) => (renter.id === renterId ? resp.data : renter))
       );
       onClose();
-    } catch {
-      setError("Não foi possível atualizar o inquilino.");
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setError("Já existe um documento deste tipo para este inquilino.");
+      } else {
+        setError("Não foi possível atualizar o inquilino.");
+      }
     }
   }
 
@@ -177,7 +228,7 @@ export function Tenants() {
                 <TableHead>Contato principal</TableHead>
                 <TableHead>Contato secundário</TableHead>
                 <TableHead>E-mail</TableHead>
-                <TableHead className="w-32 text-right"></TableHead>
+                <TableHead className="w-24 text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -209,11 +260,21 @@ export function Tenants() {
                     <TableCell>{renter.email ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <RenterDocumentsDialog renter={renter} />
                         <RenterDialog
                           renter={renter}
-                          onSubmit={(payload, onClose) =>
-                            handleUpdate(renter.id, payload, onClose)
+                          onSubmit={(
+                            payload,
+                            documents,
+                            initialDocuments,
+                            onClose
+                          ) =>
+                            handleUpdate(
+                              renter.id,
+                              payload,
+                              documents,
+                              initialDocuments,
+                              onClose
+                            )
                           }
                         />
                         <Button
@@ -238,291 +299,6 @@ export function Tenants() {
   );
 }
 
-const DOCUMENT_TYPE_LABELS = {
-  RG: "RG",
-  CPF: "CPF",
-  CNPJ: "CNPJ",
-};
-
-function RenterDocumentsDialog({ renter }) {
-  const [open, setOpen] = useState(false);
-  const [documents, setDocuments] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    setIsLoading(true);
-    setError("");
-    api
-      .get(`/renters/${renter.id}/documents`)
-      .then((resp) => {
-        if (!cancelled) setDocuments(resp.data);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar os documentos.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, renter.id]);
-
-  async function handleCreate(payload, onCloseForm) {
-    try {
-      const resp = await api.post(`/renters/${renter.id}/documents`, payload);
-      setDocuments((prev) => [...prev, resp.data]);
-      onCloseForm();
-    } catch (err) {
-      if (err.response?.status === 409) {
-        setError("Já existe um documento deste tipo para este inquilino.");
-      } else {
-        setError("Não foi possível criar o documento.");
-      }
-    }
-  }
-
-  async function handleUpdate(documentId, payload, onCloseForm) {
-    try {
-      const resp = await api.put(
-        `/renters/${renter.id}/documents/${documentId}`,
-        payload
-      );
-      setDocuments((prev) =>
-        prev.map((doc) => (doc.id === documentId ? resp.data : doc))
-      );
-      onCloseForm();
-    } catch (err) {
-      if (err.response?.status === 409) {
-        setError("Já existe um documento deste tipo para este inquilino.");
-      } else {
-        setError("Não foi possível atualizar o documento.");
-      }
-    }
-  }
-
-  async function handleDelete(documentId) {
-    if (!confirm("Excluir este documento? Esta ação não pode ser desfeita.")) {
-      return;
-    }
-    try {
-      await api.delete(`/renters/${renter.id}/documents/${documentId}`);
-      setDocuments((prev) => prev.filter((d) => d.id !== documentId));
-    } catch {
-      setError("Não foi possível excluir o documento.");
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
-          <FileText className="h-4 w-4" />
-          <span className="sr-only">Documentos</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Documentos de {renter.name}</DialogTitle>
-          <DialogDescription>
-            Gerencie RG, CPF e CNPJ do inquilino.
-          </DialogDescription>
-        </DialogHeader>
-
-        {error && (
-          <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
-        )}
-
-        <div className="mt-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Documentos</h3>
-          <DocumentFormDialog onSubmit={handleCreate} />
-        </div>
-
-        <div className="mt-2 overflow-x-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Número</TableHead>
-                <TableHead className="w-24 text-right"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={3}>
-                    <div className="flex items-center justify-center py-8 text-muted-foreground">
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Carregando...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : documents.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={3}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    Nenhum documento cadastrado.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">
-                      {DOCUMENT_TYPE_LABELS[doc.document_type] ??
-                        doc.document_type}
-                    </TableCell>
-                    <TableCell>{doc.document}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <DocumentFormDialog
-                          document={doc}
-                          onSubmit={(payload, onCloseForm) =>
-                            handleUpdate(doc.id, payload, onCloseForm)
-                          }
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => handleDelete(doc.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Excluir</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function DocumentFormDialog({ document: doc, onSubmit }) {
-  const isEdit = doc !== undefined;
-  const [open, setOpen] = useState(false);
-  const [documentType, setDocumentType] = useState(
-    isEdit ? doc.document_type : "RG"
-  );
-  const [document, setDocument] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  function handleClose() {
-    setOpen(false);
-    setDocumentType(isEdit ? doc.document_type : "RG");
-    setDocument("");
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    if (!document.trim()) return;
-    setIsSubmitting(true);
-    try {
-      await onSubmit(
-        { document_type: documentType, document: document.trim() },
-        handleClose
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {isEdit ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hover:bg-muted"
-          >
-            <Pencil className="h-4 w-4" />
-            <span className="sr-only">Editar</span>
-          </Button>
-        ) : (
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>
-              {isEdit ? "Editar documento" : "Adicionar documento"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEdit
-                ? "O número atual é mascarado. Digite o novo número completo para substituí-lo."
-                : "Cadastre um novo documento."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {isEdit && (
-              <p className="text-sm text-muted-foreground">
-                Valor atual: <span className="font-medium">{doc.document}</span>
-              </p>
-            )}
-            <div className="grid gap-2">
-              <Label htmlFor="document_type">Tipo</Label>
-              <Select
-                value={documentType}
-                onValueChange={setDocumentType}
-              >
-                <SelectTrigger id="document_type">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="document">
-                {isEdit ? "Novo número" : "Número"}
-              </Label>
-              <Input
-                id="document"
-                placeholder={
-                  documentType === "CNPJ"
-                    ? "00.000.000/0000-00"
-                    : documentType === "CPF"
-                      ? "000.000.000-00"
-                      : "00.000.000-0"
-                }
-                value={document}
-                onChange={(e) => setDocument(e.target.value)}
-                disabled={isSubmitting}
-                required
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function RenterDialog({ renter, onSubmit }) {
   const isEdit = renter !== undefined;
   const initialForm = isEdit
@@ -535,15 +311,70 @@ function RenterDialog({ renter, onSubmit }) {
     : EMPTY_FORM;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [documents, setDocuments] = useState([]);
+  const [initialDocuments, setInitialDocuments] = useState([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogError, setDialogError] = useState("");
+
+  useEffect(() => {
+    if (!open || !isEdit) {
+      setDocuments([]);
+      setInitialDocuments([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingDocs(true);
+    setDialogError("");
+    api
+      .get(`/renters/${renter.id}/documents`)
+      .then((resp) => {
+        if (!cancelled) {
+          const docs = resp.data.map((d) => ({ ...d, isDeleted: false }));
+          setDocuments(docs);
+          setInitialDocuments(docs);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDialogError("Não foi possível carregar os documentos.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDocs(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isEdit, renter?.id]);
 
   function handleClose() {
     setOpen(false);
     setForm(initialForm);
+    setDocuments([]);
+    setInitialDocuments([]);
+    setDialogError("");
   }
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function addDocument() {
+    setDocuments((prev) => [
+      ...prev,
+      { ...EMPTY_DOCUMENT, id: undefined, isDeleted: false },
+    ]);
+  }
+
+  function updateDocument(index, field, value) {
+    setDocuments((prev) =>
+      prev.map((doc, i) => (i === index ? { ...doc, [field]: value } : doc))
+    );
+  }
+
+  function removeDocument(index) {
+    setDocuments((prev) =>
+      prev.map((doc, i) => (i === index ? { ...doc, isDeleted: true } : doc))
+    );
   }
 
   async function handleSubmit(event) {
@@ -554,13 +385,23 @@ function RenterDialog({ renter, onSubmit }) {
       secondary_contact: form.secondary_contact.trim() || null,
       email: form.email.trim() || null,
     };
+
+    const visibleDocs = documents.filter((d) => !d.isDeleted);
+    const types = visibleDocs.map((d) => d.document_type);
+    if (new Set(types).size !== types.length) {
+      setDialogError("Não é permitido mais de um documento do mesmo tipo.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await onSubmit(payload, handleClose);
+      await onSubmit(payload, documents, initialDocuments, handleClose);
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  const visibleDocuments = documents.filter((d) => !d.isDeleted);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -581,7 +422,7 @@ function RenterDialog({ renter, onSubmit }) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
@@ -589,10 +430,17 @@ function RenterDialog({ renter, onSubmit }) {
             </DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "Altere os dados do morador."
-                : "Cadastre um morador para o proprietário selecionado."}
+                ? "Altere os dados e documentos do morador."
+                : "Cadastre um novo morador e seus documentos."}
             </DialogDescription>
           </DialogHeader>
+
+          {dialogError && (
+            <p className="mt-4 text-sm font-medium text-destructive">
+              {dialogError}
+            </p>
+          )}
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Nome</Label>
@@ -643,9 +491,95 @@ function RenterDialog({ renter, onSubmit }) {
                 disabled={isSubmitting}
               />
             </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Documentos</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDocument}
+                  disabled={isSubmitting || isLoadingDocs}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Adicionar documento
+                </Button>
+              </div>
+
+              {isLoadingDocs ? (
+                <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Carregando documentos...
+                </div>
+              ) : visibleDocuments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum documento cadastrado.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {visibleDocuments.map((doc) => {
+                    const actualIndex = documents.findIndex((d) => d === doc);
+                    return (
+                      <div
+                        key={actualIndex}
+                        className="flex items-start gap-2"
+                      >
+                        <Select
+                          value={doc.document_type}
+                          onValueChange={(value) =>
+                            updateDocument(actualIndex, "document_type", value)
+                          }
+                          disabled={isSubmitting}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(DOCUMENT_TYPE_LABELS).map(
+                              ([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              )
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          placeholder={
+                            doc.document_type === "CNPJ"
+                              ? "00.000.000/0000-00"
+                              : doc.document_type === "CPF"
+                                ? "000.000.000-00"
+                                : "00.000.000-0"
+                          }
+                          value={doc.document}
+                          onChange={(e) =>
+                            updateDocument(actualIndex, "document", e.target.value)
+                          }
+                          disabled={isSubmitting}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => removeDocument(actualIndex)}
+                          disabled={isSubmitting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Remover</span>
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
+
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isLoadingDocs}>
               {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Criar"}
             </Button>
           </DialogFooter>
