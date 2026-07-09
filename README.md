@@ -146,8 +146,9 @@ BACKEND_TARGET=prod FRONTEND_TARGET=prod docker compose up --build -d
 ```
 
 - Frontend servido por Nginx na porta 80.
-- Backend sem hot-reload.
-- Configure `CORS_ORIGINS` e `SECRET_KEY` no `.env` adequadamente para produção.
+- Backend runs with **Gunicorn + Uvicorn workers** (instead of plain Uvicorn), providing worker management, graceful shutdown, and automatic restarts.
+- Set `CORS_ORIGINS` and `SECRET_KEY` in `.env` appropriately for production.
+- Optional: configure `GUNICORN_WORKERS` (default 4), `GUNICORN_TIMEOUT` (default 120s) and `GUNICORN_LOG_LEVEL` (default info) via environment variables.
 
 ## Project Layout
 
