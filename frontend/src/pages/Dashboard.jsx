@@ -1,5 +1,4 @@
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
@@ -51,7 +50,7 @@ function formatShortMonth(isoDate) {
 function formatDayMonth(isoDate) {
   if (!isoDate) return "";
   const parts = isoDate.split("-");
-  return `${parts[2]}/${parts[1]}`;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
 function formatCurrencyShort(value) {
@@ -288,24 +287,15 @@ export function Dashboard() {
                 Valores que o proprietário deve receber ao longo do período.
               </CardDescription>
             </div>
-            <div className="flex items-center rounded-md border bg-muted p-1">
-              <Button
-                type="button"
-                variant={viewMode === "month" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("month")}
-              >
-                Por mês
-              </Button>
-              <Button
-                type="button"
-                variant={viewMode === "date" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("date")}
-              >
-                Por data
-              </Button>
-            </div>
+            <Select value={viewMode} onValueChange={setViewMode}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Visualização" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Por mês</SelectItem>
+                <SelectItem value="date">Por data</SelectItem>
+              </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent>
             {isLoading ? (
