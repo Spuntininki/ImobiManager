@@ -1,3 +1,9 @@
+# =============================================================================
+# ImobiManager - Docker Compose
+# Dev: docker compose up --build
+# Prod: FRONTEND_TARGET=prod BACKEND_TARGET=prod docker compose up --build
+# =============================================================================
+
 services:
   postgres:
     image: postgres:17
@@ -17,6 +23,46 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: ${BACKEND_TARGET:-dev}
+    container_name: imobimanager-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:5174"]'}
+      UVICORN_RELOAD: ${UVICORN_RELOAD:-true}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+
+  frontend:
+    build:
+      context: ./frontend
+      target: ${FRONTEND_TARGET:-dev}
+    container_name: imobimanager-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://backend:8000}
+    ports:
+      - "5174:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
 
 volumes:
   imobimanager-postgres-data:
