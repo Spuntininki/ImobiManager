@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
@@ -47,6 +48,12 @@ function formatShortMonth(isoDate) {
   return `${month}/${year}`;
 }
 
+function formatDayMonth(isoDate) {
+  if (!isoDate) return "";
+  const parts = isoDate.split("-");
+  return `${parts[2]}/${parts[1]}`;
+}
+
 function formatCurrencyShort(value) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -78,6 +85,7 @@ export function Dashboard() {
   const [summary, setSummary] = useState({ total_amount: "0.00", total_payments: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [viewMode, setViewMode] = useState("month");
 
   useEffect(() => {
     if (selectedOwnerId === null && owners.length > 0) {
@@ -115,15 +123,32 @@ export function Dashboard() {
     };
   }, [selectedOwnerId, startDate, endDate]);
 
-  const chartData = useMemo(
-    () =>
-      timeline.map((item) => ({
-        label: formatShortMonth(item.payment_date),
+  const chartData = useMemo(() => {
+    if (viewMode === "date") {
+      return timeline.map((item) => ({
+        label: formatDayMonth(item.payment_date),
         amount: Number(item.amount),
         fullDate: formatIsoDate(item.payment_date),
-      })),
-    [timeline]
-  );
+      }));
+    }
+
+    const grouped = new Map();
+    for (const item of timeline) {
+      const monthKey = formatShortMonth(item.payment_date);
+      const current = grouped.get(monthKey) ?? {
+        amount: 0,
+        fullDate: monthKey,
+      };
+      current.amount += Number(item.amount);
+      grouped.set(monthKey, current);
+    }
+
+    return Array.from(grouped.entries()).map(([label, data]) => ({
+      label,
+      amount: data.amount,
+      fullDate: data.fullDate,
+    }));
+  }, [timeline, viewMode]);
 
   return (
     <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-6">
@@ -256,11 +281,31 @@ export function Dashboard() {
 
       {selectedOwnerId !== null && owners.length > 0 && (
         <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Projeção de receitas</CardTitle>
-            <CardDescription>
-              Valores que o proprietário deve receber ao longo do período.
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle>Projeção de receitas</CardTitle>
+              <CardDescription>
+                Valores que o proprietário deve receber ao longo do período.
+              </CardDescription>
+            </div>
+            <div className="flex items-center rounded-md border bg-muted p-1">
+              <Button
+                type="button"
+                variant={viewMode === "month" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("month")}
+              >
+                Por mês
+              </Button>
+              <Button
+                type="button"
+                variant={viewMode === "date" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("date")}
+              >
+                Por data
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -298,9 +343,10 @@ export function Dashboard() {
                     />
                     <Tooltip
                       formatter={(value) => [CURRENCY.format(Number(value)), "Valor"]}
-                      labelFormatter={(_label, payload) =>
-                        payload?.[0]?.payload?.fullDate ?? _label
-                      }
+                      labelFormatter={(_label, payload) => {
+                        const fullDate = payload?.[0]?.payload?.fullDate ?? _label;
+                        return viewMode === "month" ? `Mês: ${fullDate}` : fullDate;
+                      }}
                       cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
                       contentStyle={{
                         backgroundColor: "hsl(var(--card))",
