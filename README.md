@@ -10,6 +10,7 @@ ImobiManager/
 ├── docker-compose.yml  Project-level orchestrator (Postgres, backend, frontend)
 ├── .env                Docker Compose shared environment variables
 ├── backend/
+│   ├── .env            Local bare-metal development environment
 │   ├── Dockerfile      Multi-stage backend image (dev/prod)
 │   ├── entrypoint.sh   Runs Alembic migrations + starts Uvicorn
 │   ├── .dockerignore
@@ -63,6 +64,10 @@ docker compose down
 ### Setup without Docker (alternative)
 
 If you prefer running locally without containerizing the backend and frontend:
+
+> The root `.env` in the project root is used by Docker Compose (with `postgres`
+> as the database host). The `backend/.env` file copied below is for local
+> development (with `localhost:5433`). Each reflects its own context.
 
 #### 1. Database
 
