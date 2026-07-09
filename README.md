@@ -31,13 +31,13 @@ ImobiManager/
 
 ## Quickstart
 
-### Tudo em um comando (Docker Compose — recomendado)
+### One command setup (Docker Compose — recommended)
 
 ```bash
 docker compose up --build -d
 ```
 
-Sobe Postgres, backend (com migrations automáticas via Alembic) e frontend (Vite Dev Server com HMR):
+Starts Postgres, backend (with automatic Alembic migrations) and frontend (Vite Dev Server with HMR):
 
 | Serviço  | URL                         |
 |----------|-----------------------------|
@@ -45,24 +45,24 @@ Sobe Postgres, backend (com migrations automáticas via Alembic) e frontend (Vit
 | Backend  | http://localhost:8000       |
 | Health   | `GET http://localhost:8000/health` → `{"status":"ok"}` |
 
-Para rebuildar após alterar `Dockerfile`, `pyproject.toml` ou `package.json`:
+To rebuild after changing `Dockerfile`, `pyproject.toml` or `package.json`:
 ```bash
 docker compose up --build -d
 ```
 
-Para ver os logs:
+To view logs:
 ```bash
 docker compose logs -f
 ```
 
-Para parar:
+To stop:
 ```bash
 docker compose down
 ```
 
-### Setup sem Docker (alternativa)
+### Setup without Docker (alternative)
 
-Se preferir rodar localmente sem containerizar o backend e frontend:
+If you prefer running locally without containerizing the backend and frontend:
 
 #### 1. Database
 
@@ -116,10 +116,10 @@ fresh clones and CI.
 ## Testing
 
 ```bash
-# Dentro do container (recomendado — usa o ambiente Docker)
+# Inside the container (recommended — uses the Docker environment)
 docker compose exec backend uv run pytest
 
-# Ou localmente (com Python instalado e postgres no ar)
+# Or locally (with Python installed and postgres running)
 cd backend
 uv run pytest
 ```
