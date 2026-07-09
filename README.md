@@ -1,51 +1,90 @@
 # ImobiManager
 
-Real estate rental management system. Monorepo with a React/Vite frontend and a FastAPI backend, backed by PostgreSQL. 
+Real estate rental management system. Monorepo with a React/Vite frontend and a FastAPI backend, backed by PostgreSQL.
 Currently under active development, with the core property, tenant, and contract management flows already implemented in both frontend and backend.
 
 ## Architecture
 
 ```
 ImobiManager/
-├── frontend/          React 19 + Vite SPA (UI in pt-BR)
-├── backend/           FastAPI app, SQLAlchemy, Alembic, UV
-│   └── db/schema.dbml  Authoritative PostgreSQL schema (DBML)
-├── docker-compose.yml Project-level orchestrator (Postgres today,
-│                      frontend/backend images planned later)
-└── docker/            Container artifacts (init scripts, Dockerfiles)
-    └── postgres/
+├── docker-compose.yml  Project-level orchestrator (Postgres, backend, frontend)
+├── .env                Docker Compose shared environment variables
+├── backend/
+│   ├── Dockerfile      Multi-stage backend image (dev/prod)
+│   ├── entrypoint.sh   Runs Alembic migrations + starts Uvicorn
+│   ├── .dockerignore
+│   └── db/
+│       ├── schema.dbml  Authoritative PostgreSQL schema (DBML)
+│       └── init.sql     PostgreSQL init script (creates test DB)
+├── frontend/
+│   ├── Dockerfile       Multi-stage frontend image (dev/build/prod)
+│   ├── nginx.conf       Nginx config for production stage
+│   └── .dockerignore
 ```
 
-`docker-compose.yml` lives at the repo root as the project-level orchestrator. Today it runs Postgres only; future frontend and backend Docker images will join it.
+`docker-compose.yml` lives at the repo root as the project-level orchestrator. It runs Postgres, backend (FastAPI + Uvicorn), and frontend (Vite Dev Server or Nginx depending on target).
 
 ## Prerequisites
 
-- Node.js 26.1.0 (for the frontend)
-- Python 3.14 and [UV](https://docs.astral.sh/uv/) (for the backend)
-- Docker and Docker Compose (for Postgres)
+- Docker and Docker Compose (recommended for full environment)
+- Node.js 22+ and [UV](https://docs.astral.sh/uv/) (if running without Docker)
 
 ## Quickstart
 
-### 1. Database (shared)
+### Tudo em um comando (Docker Compose — recomendado)
 
 ```bash
-docker compose up -d
+docker compose up --build -d
+```
+
+Sobe Postgres, backend (com migrations automáticas via Alembic) e frontend (Vite Dev Server com HMR):
+
+| Serviço  | URL                         |
+|----------|-----------------------------|
+| Frontend | http://localhost:5174       |
+| Backend  | http://localhost:8000       |
+| Health   | `GET http://localhost:8000/health` → `{"status":"ok"}` |
+
+Para rebuildar após alterar `Dockerfile`, `pyproject.toml` ou `package.json`:
+```bash
+docker compose up --build -d
+```
+
+Para ver os logs:
+```bash
+docker compose logs -f
+```
+
+Para parar:
+```bash
+docker compose down
+```
+
+### Setup sem Docker (alternativa)
+
+Se preferir rodar localmente sem containerizar o backend e frontend:
+
+#### 1. Database
+
+```bash
+docker compose up -d postgres
 ```
 
 Starts Postgres 17 on host port `5433` and creates two databases: `imobimanager` (dev) and `imobimanager_test` (tests).
 
-### 2. Backend
+#### 2. Backend
 
 ```bash
 cp backend/.env.example backend/.env   # then edit values if needed
 cd backend
 uv sync
+uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
 
-API at http://localhost:8000. Health check: `GET /health` → `{"status":"ok"}`.
+API at http://localhost:8000.
 
-### 2b. Create the first admin user (CLI)
+#### 2b. Create the first admin user (CLI)
 
 ```bash
 cd backend
@@ -61,7 +100,7 @@ uv run python -m app.cli delete-user --email admin@imobi.com --yes    # skip con
 uv run python -m app.cli update-password --email admin@imobi.com      # prompts for new password
 ```
 
-### 3. Frontend
+#### 3. Frontend
 
 ```bash
 cd frontend
@@ -77,11 +116,15 @@ fresh clones and CI.
 ## Testing
 
 ```bash
+# Dentro do container (recomendado — usa o ambiente Docker)
+docker compose exec backend uv run pytest
+
+# Ou localmente (com Python instalado e postgres no ar)
 cd backend
 uv run pytest
 ```
 
-Tests run against the `imobimanager_test` database, so Postgres must be up (`docker compose up -d`).
+Tests run against the `imobimanager_test` database, so Postgres must be up.
 
 ## Lint and Format
 
@@ -90,6 +133,16 @@ cd backend
 uv run ruff check .
 uv run ruff format .          # apply formatting
 ```
+
+## Production build
+
+```bash
+BACKEND_TARGET=prod FRONTEND_TARGET=prod docker compose up --build -d
+```
+
+- Frontend servido por Nginx na porta 80.
+- Backend sem hot-reload.
+- Configure `CORS_ORIGINS` e `SECRET_KEY` no `.env` adequadamente para produção.
 
 ## Project Layout
 
@@ -135,11 +188,10 @@ All under `/api/v1`, require `Authorization: Bearer <jwt>` unless noted.
 - `GET  /owners/{owner_id}/addresses` — list addresses for an owner (scoped).
 - `/addresses/{address_id}` — GET / PUT / DELETE; scoped via the owner on the address (404-only). `type` is `HOUSE` or `COMMERCIAL`.
 - `/owners/{owner_id}/documents` — POST / GET list; one document per type per owner (unique constraint). Reads are **masked** (last 2 digits for CPF/CNPJ, last 1 for RG) — the raw value never crosses HTTP.
-- `GET/PUT/DELETE /owners/{owner_id}/documents/{document_id}` — 404 if the document belongs to a different owner; 409 on duplicate type via PUT.
+- `GET/PUT/DELETE /owners/{owner_id}/documents/{document_id}` — 404 if the document belongs to a different owner; 403 on duplicate type via PUT.
 - `POST /owners/{owner_id}/contracts` — create a contract tying together an owner, a renter, and an address. `status` auto-`PENDING`, `generation_date` auto-`now()`. Validates renter↔owner (via `owner_renters`) and address↔owner consistency — 422 on mismatch. `*_file_path` fields are not accepted from clients (backend-only).
 - `GET  /owners/{owner_id}/contracts` — list contracts for an owner (scoped).
 - `/contracts/{contract_id}` — GET / PATCH (partial) / DELETE; scoped via the contract's owner (404-only). PATCH accepts status/lifecycle changes (free transitions); `*_file_path` not accepted. Money fields use `Numeric(12, 2)`.
 
 Migrations: `cd backend && uv run alembic upgrade head`.
 Admin user: `cd backend && uv run python -m app.cli create-user ...` (see step 2b above).
-<!-- TODO future: Frontend Docker image added to docker-compose.yml -->
