@@ -15,7 +15,7 @@ _DOCUMENT_VALIDATORS: dict[DocumentType, tuple[int, int | None]] = {
 
 
 def _validate_document(document_type: DocumentType, document: str) -> str:
-    """Validate document format. CPF/CNPJ must be bare digits, RG is free-form."""
+    """Validate document format. CPF must be digits only; CNPJ may be alphanumeric (IN RFB 2212/2024)."""
     spec = _DOCUMENT_VALIDATORS.get(document_type)
     if spec is None:
         raise ValueError(f"Unknown document type: {document_type}")
@@ -25,8 +25,10 @@ def _validate_document(document_type: DocumentType, document: str) -> str:
             f"{document_type} document must be between {min_len} and "
             f"{max_len} characters, got {len(document)}"
         )
-    if document_type in (DocumentType.CPF, DocumentType.CNPJ) and not document.isdigit():
+    if document_type is DocumentType.CPF and not document.isdigit():
         raise ValueError(f"{document_type} must contain only digits, got '{document}'")
+    if document_type is DocumentType.CNPJ and not document.isascii():
+        raise ValueError(f"{document_type} contains invalid characters, got '{document}'")
     return document
 
 

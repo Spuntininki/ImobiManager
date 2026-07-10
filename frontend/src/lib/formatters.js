@@ -91,25 +91,43 @@ function isValidCPF(cpf) {
   return secondDigit === parseInt(cpf[10], 10);
 }
 
+/** Convert a base-32 char (0-9, A-Z) to its numeric value (IN RFB 2212/2024). */
+function cnpjCharValue(c) {
+  const code = c.charCodeAt(0);
+  if (code >= 48 && code <= 57) return code - 48;   // 0-9 → 0-9
+  if (code >= 65 && code <= 90) return code - 55;    // A-Z → 10-35
+  return NaN;
+}
+
 function isValidCNPJ(cnpj) {
-  if (cnpj.length !== CNPJ_LENGTH || /^(\d)\1{13}$/.test(cnpj)) return false;
+  if (cnpj.length !== CNPJ_LENGTH) return false;
+  // Reject repeated characters (e.g. 14 identical chars).
+  if (/^(.)\1{13}$/.test(cnpj)) return false;
 
   const weightsFirst = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
   const weightsSecond = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
   let sum = 0;
   for (let i = 0; i < 12; i++) {
-    sum += parseInt(cnpj[i], 10) * weightsFirst[i];
+    const val = cnpjCharValue(cnpj[i]);
+    if (isNaN(val)) return false;
+    sum += val * weightsFirst[i];
   }
+  const firstCheck = cnpjCharValue(cnpj[12]);
+  if (isNaN(firstCheck)) return false;
   let firstDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (firstDigit !== parseInt(cnpj[12], 10)) return false;
+  if (firstDigit !== firstCheck) return false;
 
   sum = 0;
   for (let i = 0; i < 13; i++) {
-    sum += parseInt(cnpj[i], 10) * weightsSecond[i];
+    const val = cnpjCharValue(cnpj[i]);
+    if (isNaN(val)) return false;
+    sum += val * weightsSecond[i];
   }
+  const secondCheck = cnpjCharValue(cnpj[13]);
+  if (isNaN(secondCheck)) return false;
   let secondDigit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  return secondDigit === parseInt(cnpj[13], 10);
+  return secondDigit === secondCheck;
 }
 
 export function getDocumentMaxLength(type) {
@@ -143,7 +161,7 @@ export function validateDocument(type, value) {
     if (!isValidCPF(raw)) return "CPF inválido.";
   } else if (type === "CNPJ") {
     if (raw.length !== CNPJ_LENGTH) {
-      return `CNPJ deve ter ${CNPJ_LENGTH} dígitos.`;
+      return `CNPJ deve ter ${CNPJ_LENGTH} caracteres.`;
     }
     if (!isValidCNPJ(raw)) return "CNPJ inválido.";
   } else if (type === "RG") {
