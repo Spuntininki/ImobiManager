@@ -1,13 +1,13 @@
 """Pydantic schemas for authentication."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
     """Login payload."""
 
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(..., min_length=6)
 
 
 class TokenResponse(BaseModel):

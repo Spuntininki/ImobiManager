@@ -33,7 +33,7 @@ async def test_login_wrong_password(client: AsyncClient, db_session: AsyncSessio
     await _create_user(db_session)
     response = await client.post(
         "/api/v1/auth/login",
-        json={"email": "user@test.com", "password": "wrong"},
+        json={"email": "user@test.com", "password": "wrong1"},
     )
     assert response.status_code == 401
 

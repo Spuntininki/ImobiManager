@@ -45,7 +45,7 @@ async def _create_renter_via_api(
 ) -> int:
     resp = await client.post(
         f"/api/v1/owners/{owner_id}/renters",
-        json={"name": name, "primary_contact": "999"},
+            json={"name": name, "primary_contact": "+55 11 9999-9999"},
         headers=headers,
     )
     return resp.json()["id"]

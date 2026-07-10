@@ -151,7 +151,7 @@ async def test_create_renter_for_owner_not_managed_returns_404(
     await db_session.commit()
     response = await client.post(
         f"/api/v1/owners/{other.id}/renters",
-        json={"name": "X", "primary_contact": "0"},
+        json={"name": "X", "primary_contact": "+55 11 9999-9999"},
         headers=headers,
     )
     assert response.status_code == 404
@@ -255,8 +255,8 @@ async def test_update_renter(client: AsyncClient, db_session: AsyncSession) -> N
         f"/api/v1/renters/{renter_id}",
         json={
             "name": "New",
-            "primary_contact": "555",
-            "secondary_contact": "666",
+            "primary_contact": "+55 11 9999-9999",
+            "secondary_contact": "+55 11 9888-8888",
             "email": "new@example.com",
         },
         headers=headers,
@@ -264,8 +264,8 @@ async def test_update_renter(client: AsyncClient, db_session: AsyncSession) -> N
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "New"
-    assert data["primary_contact"] == "555"
-    assert data["secondary_contact"] == "666"
+    assert data["primary_contact"] == "+55 11 9999-9999"
+    assert data["secondary_contact"] == "+55 11 9888-8888"
     assert data["email"] == "new@example.com"
 
 
@@ -274,7 +274,7 @@ async def test_update_renter_not_found(client: AsyncClient, db_session: AsyncSes
     headers = await _auth_headers(client)
     response = await client.put(
         "/api/v1/renters/9999",
-        json={"name": "X", "primary_contact": "0"},
+        json={"name": "X", "primary_contact": "+55 11 9999-9999"},
         headers=headers,
     )
     assert response.status_code == 404
@@ -290,7 +290,7 @@ async def test_update_renter_not_linked_to_managed_owner_returns_404(
     await db_session.commit()
     response = await client.put(
         f"/api/v1/renters/{other_renter.id}",
-        json={"name": "X", "primary_contact": "0"},
+        json={"name": "X", "primary_contact": "+55 11 9999-9999"},
         headers=headers,
     )
     assert response.status_code == 404

@@ -3,9 +3,18 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import ContractStatus
+
+
+def _check_dates_ordered(
+    start: datetime | None,
+    end: datetime | None,
+) -> None:
+    """Raise ValueError if both dates are present and start >= end."""
+    if start is not None and end is not None and start >= end:
+        raise ValueError("start_date must be before end_date")
 
 
 class ContractCreate(BaseModel):
@@ -17,14 +26,19 @@ class ContractCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    renter_id: int
-    address_id: int
+    renter_id: int = Field(..., gt=0)
+    address_id: int = Field(..., gt=0)
     start_date: datetime
     end_date: datetime
-    monthly_revenue: Decimal
-    deposit_value: Decimal
-    deposit_months: int
+    monthly_revenue: Decimal = Field(..., gt=0)
+    deposit_value: Decimal = Field(..., ge=0)
+    deposit_months: int = Field(..., ge=1, le=12)
     payment_day: int = Field(..., ge=1, le=31)
+
+    @model_validator(mode="after")
+    def _validate_dates(self) -> "ContractCreate":
+        _check_dates_ordered(self.start_date, self.end_date)
+        return self
 
 
 class ContractUpdate(BaseModel):
@@ -38,17 +52,22 @@ class ContractUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    renter_id: int | None = None
-    address_id: int | None = None
+    renter_id: int | None = Field(default=None, gt=0)
+    address_id: int | None = Field(default=None, gt=0)
     start_date: datetime | None = None
     end_date: datetime | None = None
-    monthly_revenue: Decimal | None = None
-    deposit_value: Decimal | None = None
-    deposit_months: int | None = None
+    monthly_revenue: Decimal | None = Field(default=None, gt=0)
+    deposit_value: Decimal | None = Field(default=None, ge=0)
+    deposit_months: int | None = Field(default=None, ge=1, le=12)
     payment_day: int | None = Field(default=None, ge=1, le=31)
     status: ContractStatus | None = None
     signed_date: datetime | None = None
     cancel_date: datetime | None = None
+
+    @model_validator(mode="after")
+    def _validate_dates(self) -> "ContractUpdate":
+        _check_dates_ordered(self.start_date, self.end_date)
+        return self
 
 
 class ContractRead(BaseModel):
