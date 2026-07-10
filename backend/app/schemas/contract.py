@@ -12,7 +12,7 @@ class ContractCreate(BaseModel):
     """Payload for creating a contract. status and generation_date are auto-set.
 
     `extra="forbid"` ensures clients cannot inject fields the API doesn't
-    accept (notably `*_file_path`, which is backend-only).
+    accept (notably `contract_file_path`, which is backend-only).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -28,12 +28,12 @@ class ContractCreate(BaseModel):
 
 
 class ContractUpdate(BaseModel):
-    """Payload for patching a contract. All fields optional, *_file_path excluded.
+    """Payload for patching a contract. All fields optional, file_path excluded.
 
     `status`, `signed_date`, and `cancel_date` are accepted here so clients
-    can advance the contract lifecycle. The two `*_file_path` fields are
+    can advance the contract lifecycle. The `contract_file_path` field is
     intentionally absent — only the backend (future file-upload endpoint)
-    sets them. `extra="forbid"` enforces this at the schema layer.
+    sets it. `extra="forbid"` enforces this at the schema layer.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -70,7 +70,6 @@ class ContractRead(BaseModel):
     signed_date: datetime | None
     cancel_date: datetime | None
     status: ContractStatus
-    unrecognized_contract_file_path: str | None
-    recognized_contract_file_path: str | None
+    contract_file_path: str | None
     created_at: datetime
     updated_at: datetime

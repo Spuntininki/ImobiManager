@@ -113,8 +113,7 @@ Table contracts {
   signed_date timestamp [note: 'When the contract was signed by the parties.']
   cancel_date timestamp [note: 'When the contract was cancelled or terminated.']
   status contract_status [not null, note: 'Lifecycle status of the contract.']
-  unrecognized_contract_file_path varchar [note: 'Path to the contract copy before notary recognition (cartório).']
-  recognized_contract_file_path varchar [note: 'Path to the contract copy after notary recognition (cartório).']
+  contract_file_path varchar [note: 'Path to the contract pdf file in the storage bucket.']
   created_at timestamp
   updated_at timestamp
 }

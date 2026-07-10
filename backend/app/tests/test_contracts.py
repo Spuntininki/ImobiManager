@@ -158,8 +158,7 @@ async def test_create_contract(client: AsyncClient, db_session: AsyncSession) ->
     # Lifecycle-dated fields are none at creation
     assert data["signed_date"] is None
     assert data["cancel_date"] is None
-    assert data["unrecognized_contract_file_path"] is None
-    assert data["recognized_contract_file_path"] is None
+    assert data["contract_file_path"] is None
     # Decimal round-trip
     assert data["monthly_revenue"] == "1500.50"
     assert data["deposit_value"] == "1500.00"
@@ -435,7 +434,7 @@ async def test_patch_contract_file_path_not_accepted_422(
     contract_id = await _create_contract_via_api(client, headers, o, r, a)
     response = await client.patch(
         f"/api/v1/contracts/{contract_id}",
-        json={"unrecognized_contract_file_path": "/tmp/contract.pdf"},
+        json={"contract_file_path": "/tmp/contract.pdf"},
         headers=headers,
     )
     assert response.status_code == 422

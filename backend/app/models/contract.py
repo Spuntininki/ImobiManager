@@ -33,8 +33,7 @@ class Contract(Base):
     status: Mapped[ContractStatus] = mapped_column(
         Enum(ContractStatus, name="contract_status"), nullable=False
     )
-    unrecognized_contract_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
-    recognized_contract_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    contract_file_path: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
