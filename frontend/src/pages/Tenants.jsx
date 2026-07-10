@@ -117,7 +117,7 @@ export function Tenants() {
       setRenters((prev) => [...prev, resp.data]);
       onClose();
     } catch {
-      setError("Não foi possível criar o inquilino.");
+      throw new Error("Não foi possível criar o inquilino.");
     }
   }
 
@@ -125,27 +125,11 @@ export function Tenants() {
     try {
       const resp = await api.put(`/renters/${renterId}`, payload);
 
-      const initialById = Object.fromEntries(
-        initialDocuments.map((d) => [d.id, d])
-      );
-
       for (const doc of documents) {
         const isExisting = typeof doc.id === "number";
         if (doc.isDeleted && isExisting) {
           await api.delete(`/renters/${renterId}/documents/${doc.id}`);
-        } else if (isExisting) {
-          const initial = initialById[doc.id];
-          if (
-            initial &&
-            (initial.document_type !== doc.document_type ||
-              initial.document !== doc.document.trim())
-          ) {
-            await api.put(`/renters/${renterId}/documents/${doc.id}`, {
-              document_type: doc.document_type,
-              document: doc.document.trim(),
-            });
-          }
-        } else if (!doc.isDeleted) {
+        } else if (!isExisting && !doc.isDeleted) {
           await api.post(`/renters/${renterId}/documents`, {
             document_type: doc.document_type,
             document: doc.document.trim(),
@@ -159,10 +143,9 @@ export function Tenants() {
       onClose();
     } catch (err) {
       if (err.response?.status === 409) {
-        setError("Já existe um documento deste tipo para este inquilino.");
-      } else {
-        setError("Não foi possível atualizar o inquilino.");
+        throw new Error("Já existe um documento deste tipo para este inquilino.");
       }
+      throw new Error("Não foi possível atualizar o inquilino.");
     }
   }
 
@@ -462,9 +445,11 @@ function RenterDialog({ renter, onSubmit }) {
 
     const docErrors = {};
     for (const doc of visibleDocs) {
+      // Existing docs are read-only; newly added docs must be validated.
+      if (typeof doc.id === "number") continue;
       const error = validateDocument(doc.document_type, doc.document);
       if (error) {
-        docErrors[doc.id ?? doc._tempId] = error;
+        docErrors[doc._tempId] = error;
       }
     }
 
@@ -491,15 +476,19 @@ function RenterDialog({ renter, onSubmit }) {
 
     const rawDocuments = documents.map((doc) => ({
       ...doc,
-      document: parseDocument(doc.document),
+      // Existing docs are read-only — keep the original value; only parse new inputs.
+      document: typeof doc.id === "number" ? doc.document : parseDocument(doc.document),
     }));
 
     setIsSubmitting(true);
     try {
       await onSubmit(payload, rawDocuments, initialDocuments, handleClose);
-    } finally {
+    } catch (err) {
+      setDialogError(err.message);
       setIsSubmitting(false);
+      return;
     }
+    setIsSubmitting(false);
   }
 
   const visibleDocuments = documents.filter((d) => !d.isDeleted);
@@ -646,51 +635,67 @@ function RenterDialog({ renter, onSubmit }) {
                   {visibleDocuments.map((doc) => {
                     const actualIndex = documents.findIndex((d) => d === doc);
                     const docError = documentErrors[doc.id ?? doc._tempId];
+                    const isExisting = typeof doc.id === "number";
                     return (
                       <div
                         key={doc.id ?? doc._tempId}
                         className="space-y-1"
                       >
                         <div className="flex items-start gap-2">
-                          <Select
-                            value={doc.document_type}
-                            onValueChange={(value) =>
-                              updateDocument(actualIndex, "document_type", value)
-                            }
-                            disabled={isSubmitting}
-                          >
-                            <SelectTrigger className="w-28">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(DOCUMENT_TYPE_LABELS).map(
-                                ([value, label]) => (
-                                  <SelectItem key={value} value={value}>
-                                    {label}
-                                  </SelectItem>
-                                )
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            placeholder={
-                              doc.document_type === "CNPJ"
-                                ? "00.000.000/0000-00"
-                                : doc.document_type === "CPF"
-                                  ? "000.000.000-00"
-                                  : "00.000.000-0"
-                            }
-                            value={doc.document}
-                            onChange={(e) =>
-                              updateDocument(actualIndex, "document", e.target.value)
-                            }
-                            onBeforeInput={limitRawLength(
-                              parseDocument,
-                              getDocumentMaxLength(doc.document_type)
-                            )}
-                            disabled={isSubmitting}
-                            aria-invalid={!!docError}
-                          />
+                          {isExisting ? (
+                            <>
+                              <div className="flex h-10 w-28 items-center rounded-md border bg-muted px-3 text-sm font-medium text-muted-foreground">
+                                {DOCUMENT_TYPE_LABELS[doc.document_type]}
+                              </div>
+                              <div className="flex h-10 flex-1 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">
+                                {doc.document || (
+                                  <span className="italic">—</span>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <Select
+                                value={doc.document_type}
+                                onValueChange={(value) =>
+                                  updateDocument(actualIndex, "document_type", value)
+                                }
+                                disabled={isSubmitting}
+                              >
+                                <SelectTrigger className="w-28">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(DOCUMENT_TYPE_LABELS).map(
+                                    ([value, label]) => (
+                                      <SelectItem key={value} value={value}>
+                                        {label}
+                                      </SelectItem>
+                                    )
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                placeholder={
+                                  doc.document_type === "CNPJ"
+                                    ? "00.000.000/0000-00"
+                                    : doc.document_type === "CPF"
+                                      ? "000.000.000-00"
+                                      : "00.000.000-0"
+                                }
+                                value={doc.document}
+                                onChange={(e) =>
+                                  updateDocument(actualIndex, "document", e.target.value)
+                                }
+                                onBeforeInput={limitRawLength(
+                                  parseDocument,
+                                  getDocumentMaxLength(doc.document_type)
+                                )}
+                                disabled={isSubmitting}
+                                aria-invalid={!!docError}
+                              />
+                            </>
+                          )}
                           <Button
                             type="button"
                             variant="ghost"
