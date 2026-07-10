@@ -76,56 +76,56 @@
 
 //data_string_conversion_params
 {
-    "units": {
-        "descriptions": [
-            "zero",
-            "um",
-            "dois",
-            "três",
-            "quatro",
-            "cinco",
-            "seis",
-            "sete",
-            "oito",
-            "nove",
-        ],
-        "condition_to_enter": "v >= 0 and v < 10",
-        "decimal_place_desc_separator": 1
-    },
-    "specials": {
-        "descriptions": [
-            "dez",
-            "onze",
-            "doze",
-            "treze",
-            "catorze",
-            "quinze",
-            "dezesseis",
-            "dezessete",
-            "dezoito",
-            "dezenove",
-        ],
-        "condition_to_enter": "v >= 10 and v < 20",
-        "decimal_place_desc_separator": 1
-    },
-    
-    "tens": {
-        "descriptions": [
-            "vinte",
-            "trinta",
-            "quarenta",
-            "cinquenta",
-            "sessenta",
-            "setenta",
-            "oitenta",
-            "noventa"
-        ],
-        "condition_to_enter": "v >= 20 and v < 100",
-        "decimal_place_desc_separator": 10
-    },
-    "hundreds":{
-        "descriptions": 
-            [
+    values: [
+        "units": {
+            "descriptions": [
+                    "zero",
+                    "um",
+                    "dois",
+                    "três",
+                    "quatro",
+                    "cinco",
+                    "seis",
+                    "sete",
+                    "oito",
+                    "nove",
+            ],
+            "condition_to_enter": "v >= 0 and v < 10",
+            "decimal_place_desc_separator": 1
+        },
+        "specials": {
+            "descriptions": [
+                "dez",
+                "onze",
+                "doze",
+                "treze",
+                "catorze",
+                "quinze",
+                "dezesseis",
+                "dezessete",
+                "dezoito",
+                "dezenove",
+            ],
+            "condition_to_enter": "v >= 10 and v < 20",
+            "decimal_place_desc_separator": 1
+        },
+        
+        "tens": {
+            "descriptions": [
+                "vinte",
+                "trinta",
+                "quarenta",
+                "cinquenta",
+                "sessenta",
+                "setenta",
+                "oitenta",
+                "noventa"
+            ],
+            "condition_to_enter": "v >= 20 and v < 100",
+            "decimal_place_desc_separator": 10
+        },
+        "hundreds":{
+            "descriptions": [
                 "cem",
                 "cento",
                 "duzentos",
@@ -137,17 +137,20 @@
                 "oitocentos",
                 "novecentos",
             ],
-        "condition_to_enter": "v >= 100 and v < 1000:",
-        "decimal_place_desc_separator": 100
-        
+            "condition_to_enter": "v >= 100 and v < 1000:",
+            "decimal_place_desc_separator": 100
+            
 
-    }, 
-    "thousands": {
-        "descriptions": [
-            "mil"
-        ],
-        "condition_to_enter": "v >= 1000 and v < 1_000_000:",
-        "decimal_place_desc_separator": 1000
-    }
+        }, 
+        "thousands": {
+            "descriptions": [
+                "mil"
+            ],
+            "condition_to_enter": "v >= 1000 and v < 1_000_000:",
+            "decimal_place_desc_separator": 1000
+        }
 
+    ]
+    max_value_to_convert: 999_999
+    
 }
