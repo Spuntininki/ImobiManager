@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from app.core.document_validation import is_valid_cnpj, is_valid_cpf
 from app.core.masking import mask_document
 from app.models.enums import DocumentType
 
@@ -30,6 +31,11 @@ def _validate_document(document_type: DocumentType, document: str) -> str:
         raise ValueError(f"{document_type} must contain only digits, got '{document}'")
     if document_type is DocumentType.CNPJ and not document.isascii():
         raise ValueError(f"{document_type} contains invalid characters, got '{document}'")
+    # Check-digit validation (parity with frontend).
+    if document_type is DocumentType.CPF and not is_valid_cpf(document):
+        raise ValueError(f"{document_type} '{document}' failed check-digit validation")
+    if document_type is DocumentType.CNPJ and not is_valid_cnpj(document):
+        raise ValueError(f"{document_type} '{document}' failed check-digit validation")
     return document
 
 

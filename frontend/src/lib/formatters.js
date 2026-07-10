@@ -91,11 +91,12 @@ function isValidCPF(cpf) {
   return secondDigit === parseInt(cpf[10], 10);
 }
 
-/** Convert a base-32 char (0-9, A-Z) to its numeric value (IN RFB 2212/2024). */
+/** Convert a CNPJ char to its numeric value per RFB spec (ASCII code minus 48).
+ *  0-9 → 0-9, A-Z → 17-42 (IN RFB 2.229/2024). */
 function cnpjCharValue(c) {
   const code = c.charCodeAt(0);
   if (code >= 48 && code <= 57) return code - 48;   // 0-9 → 0-9
-  if (code >= 65 && code <= 90) return code - 55;    // A-Z → 10-35
+  if (code >= 65 && code <= 90) return code - 48;    // A-Z → 17-42
   return NaN;
 }
 
