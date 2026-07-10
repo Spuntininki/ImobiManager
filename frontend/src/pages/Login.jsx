@@ -14,6 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  validateEmail,
+  validatePassword,
+} from "@/lib/formatters";
 
 export function Login() {
   const { login } = useAuth();
@@ -21,14 +25,22 @@ export function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+    setFieldErrors({});
 
-    if (!email.trim() || !password.trim()) {
-      setError("Preencha e-mail e senha.");
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    const errors = {};
+    if (emailError) errors.email = emailError;
+    if (passwordError) errors.password = passwordError;
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -72,10 +84,19 @@ export function Login() {
                   type="email"
                   placeholder="proprietario@exemplo.com"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
                   autoComplete="email"
                   disabled={isSubmitting}
+                  aria-invalid={!!fieldErrors.email}
                 />
+                {fieldErrors.email && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.email}
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -85,10 +106,19 @@ export function Login() {
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
                   autoComplete="current-password"
                   disabled={isSubmitting}
+                  aria-invalid={!!fieldErrors.password}
                 />
+                {fieldErrors.password && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.password}
+                  </p>
+                )}
               </div>
 
               {error && (

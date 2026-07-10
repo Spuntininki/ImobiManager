@@ -337,19 +337,44 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
     : EMPTY_FORM;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleClose() {
     setOpen(false);
     setForm(initialForm);
+    setFieldErrors({});
   }
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    setFieldErrors({});
+
+    const errors = {};
+
+    if (!form.start_date) {
+      errors.start_date = "Data de início é obrigatória.";
+    }
+    if (!form.end_date) {
+      errors.end_date = "Data de fim é obrigatória.";
+    }
+    if (form.start_date && form.end_date && form.start_date >= form.end_date) {
+      errors.end_date = "Data de fim deve ser posterior à data de início.";
+    }
+    if (form.deposit_months && Number(form.deposit_months) > 12) {
+      errors.deposit_months = "Meses de depósito deve ser no máximo 12.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
     const payload = {
       renter_id: Number(form.renter_id),
       address_id: Number(form.address_id),
@@ -366,6 +391,8 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
     setIsSubmitting(true);
     try {
       await onSubmit(payload, handleClose);
+    } catch {
+      // Error handled by parent
     } finally {
       setIsSubmitting(false);
     }
@@ -463,7 +490,13 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
                   onChange={(e) => updateField("start_date", e.target.value)}
                   disabled={isSubmitting}
                   required
+                  aria-invalid={!!fieldErrors.start_date}
                 />
+                {fieldErrors.start_date && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.start_date}
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-2">
@@ -475,7 +508,13 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
                   onChange={(e) => updateField("end_date", e.target.value)}
                   disabled={isSubmitting}
                   required
+                  aria-invalid={!!fieldErrors.end_date}
                 />
+                {fieldErrors.end_date && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.end_date}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -516,13 +555,20 @@ function ContractDialog({ contract, renters, addresses, onSubmit }) {
                   id="deposit_months"
                   type="number"
                   min="1"
+                  max="12"
                   step="1"
                   placeholder="2"
                   value={form.deposit_months}
                   onChange={(e) => updateField("deposit_months", e.target.value)}
                   disabled={isSubmitting}
                   required
+                  aria-invalid={!!fieldErrors.deposit_months}
                 />
+                {fieldErrors.deposit_months && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.deposit_months}
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-2">

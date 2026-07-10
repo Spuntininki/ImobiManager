@@ -4,6 +4,11 @@ import { Link } from "react-router-dom";
 
 import api from "@/lib/api";
 import { useOwners } from "@/lib/useOwners";
+import {
+  validateState,
+  validateZipCode,
+  validateRequiredText,
+} from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -277,33 +282,59 @@ function AddressDialog({ address, onSubmit }) {
     : EMPTY_FORM;
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleClose() {
     setOpen(false);
     setForm(initialForm);
+    setFieldErrors({});
   }
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    // Normalize empty optional fields to null and trim text.
-    const payload = {
-      ...form,
+    setFieldErrors({});
+
+    const trimmed = {
       street_name: form.street_name.trim(),
       number: form.number.trim(),
       complement: form.complement.trim() || null,
       neighborhood: form.neighborhood.trim(),
       city: form.city.trim(),
-      state: form.state.trim(),
+      state: form.state.trim().toUpperCase(),
       zip_code: form.zip_code.trim(),
     };
+
+    const errors = {};
+    const streetErr = validateRequiredText(trimmed.street_name, "Logradouro");
+    if (streetErr) errors.street_name = streetErr;
+    const numberErr = validateRequiredText(trimmed.number, "Número", 20);
+    if (numberErr) errors.number = numberErr;
+    const neighborhoodErr = validateRequiredText(trimmed.neighborhood, "Bairro");
+    if (neighborhoodErr) errors.neighborhood = neighborhoodErr;
+    const cityErr = validateRequiredText(trimmed.city, "Cidade");
+    if (cityErr) errors.city = cityErr;
+    const stateErr = validateState(trimmed.state);
+    if (stateErr) errors.state = stateErr;
+    const zipErr = validateZipCode(trimmed.zip_code);
+    if (zipErr) errors.zip_code = zipErr;
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    const payload = { ...trimmed, type: form.type };
     setIsSubmitting(true);
     try {
       await onSubmit(payload, handleClose);
+    } catch {
+      // Error handled by parent
     } finally {
       setIsSubmitting(false);
     }
@@ -341,7 +372,7 @@ function AddressDialog({ address, onSubmit }) {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
               <div className="grid gap-2">
                 <Label htmlFor="street_name">Logradouro</Label>
                 <Input
@@ -350,9 +381,16 @@ function AddressDialog({ address, onSubmit }) {
                   value={form.street_name}
                   onChange={(e) => updateField("street_name", e.target.value)}
                   disabled={isSubmitting}
+                  maxLength={255}
                   required
                   autoFocus
+                  aria-invalid={!!fieldErrors.street_name}
                 />
+                {fieldErrors.street_name && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.street_name}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="number">Número</Label>
@@ -362,8 +400,15 @@ function AddressDialog({ address, onSubmit }) {
                   value={form.number}
                   onChange={(e) => updateField("number", e.target.value)}
                   disabled={isSubmitting}
+                  maxLength={20}
                   required
+                  aria-invalid={!!fieldErrors.number}
                 />
+                {fieldErrors.number && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.number}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -375,6 +420,7 @@ function AddressDialog({ address, onSubmit }) {
                 value={form.complement}
                 onChange={(e) => updateField("complement", e.target.value)}
                 disabled={isSubmitting}
+                maxLength={255}
               />
             </div>
 
@@ -386,8 +432,15 @@ function AddressDialog({ address, onSubmit }) {
                 value={form.neighborhood}
                 onChange={(e) => updateField("neighborhood", e.target.value)}
                 disabled={isSubmitting}
+                maxLength={255}
                 required
+                aria-invalid={!!fieldErrors.neighborhood}
               />
+              {fieldErrors.neighborhood && (
+                <p className="text-sm font-medium text-destructive">
+                  {fieldErrors.neighborhood}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_100px_140px]">
@@ -399,8 +452,15 @@ function AddressDialog({ address, onSubmit }) {
                   value={form.city}
                   onChange={(e) => updateField("city", e.target.value)}
                   disabled={isSubmitting}
+                  maxLength={255}
                   required
+                  aria-invalid={!!fieldErrors.city}
                 />
+                {fieldErrors.city && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.city}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="state">Estado</Label>
@@ -410,8 +470,15 @@ function AddressDialog({ address, onSubmit }) {
                   value={form.state}
                   onChange={(e) => updateField("state", e.target.value)}
                   disabled={isSubmitting}
+                  maxLength={2}
                   required
+                  aria-invalid={!!fieldErrors.state}
                 />
+                {fieldErrors.state && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.state}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="zip_code">CEP</Label>
@@ -421,8 +488,15 @@ function AddressDialog({ address, onSubmit }) {
                   value={form.zip_code}
                   onChange={(e) => updateField("zip_code", e.target.value)}
                   disabled={isSubmitting}
+                  maxLength={9}
                   required
+                  aria-invalid={!!fieldErrors.zip_code}
                 />
+                {fieldErrors.zip_code && (
+                  <p className="text-sm font-medium text-destructive">
+                    {fieldErrors.zip_code}
+                  </p>
+                )}
               </div>
             </div>
 

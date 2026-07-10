@@ -2,8 +2,8 @@ export const PHONE_MAX_DIGITS = 11;
 export const CPF_LENGTH = 11;
 export const CNPJ_LENGTH = 14;
 const RG_MIN_LENGTH = 4;
-export const RG_MAX_LENGTH = 14;
-const NAME_MAX_LENGTH = 100;
+export const RG_MAX_LENGTH = 20;
+const NAME_MAX_LENGTH = 255;
 const EMAIL_MAX_LENGTH = 254;
 
 export function parsePhone(value) {
@@ -176,5 +176,40 @@ export function validateName(value) {
   if (name.length > NAME_MAX_LENGTH) {
     return `Nome deve ter no máximo ${NAME_MAX_LENGTH} caracteres.`;
   }
+  return null;
+}
+
+export function validateState(value) {
+  const raw = (value || "").trim();
+  if (!raw) return "Estado é obrigatório.";
+  if (raw.length !== 2) return "Estado deve ter 2 letras (ex: SP).";
+  if (!/^[A-Z]{2}$/.test(raw.toUpperCase())) {
+    return "Estado deve ser a sigla com 2 letras (ex: SP, RJ).";
+  }
+  return null;
+}
+
+export function validateZipCode(value) {
+  const raw = (value || "").trim();
+  if (!raw) return "CEP é obrigatório.";
+  if (!/^\d{5}-?\d{3}$/.test(raw)) {
+    return "CEP deve estar no formato 00000-000.";
+  }
+  return null;
+}
+
+export function validateRequiredText(value, label, maxLength = 255) {
+  const raw = (value || "").trim();
+  if (!raw) return `${label} é obrigatório.`;
+  if (raw.length > maxLength) {
+    return `${label} deve ter no máximo ${maxLength} caracteres.`;
+  }
+  return null;
+}
+
+export function validatePassword(value) {
+  const raw = (value || "").trim();
+  if (!raw) return "Senha é obrigatória.";
+  if (raw.length < 6) return "Senha deve ter no mínimo 6 caracteres.";
   return null;
 }
