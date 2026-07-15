@@ -22,6 +22,13 @@ from app.models.enums import DocumentType
 
 from app.db.session import async_session_factory  # noqa: E402
 from app.core.config import settings  # noqa: E402
+from formatters import ( 
+    monthly_revenue_desc, 
+    deposit_months_desc,
+    contract_generate_date_desc,
+    address_string,
+    contract_time_desc
+)
 
 
 async def query_the_contract_data(contract_id: int) -> dict:
@@ -79,14 +86,28 @@ async def main() -> None:
         data = json.load(arquivo)
 
     CONTRACT_ID_TO_PROCESS = 2
+
+    FORMATTERS = {
+        "contract_time_string_desc": contract_time_desc,
+        "address_string": address_string,
+        "monthly_revenue_string_desc": monthly_revenue_desc,
+        "deposit_months_string_desc": deposit_months_desc,
+        "contract_generate_date_description": contract_generate_date_desc,
+    }
     
     contract_data = await query_the_contract_data(contract_id=CONTRACT_ID_TO_PROCESS)
     
     for description, value in data["replace"].items():
-        if isinstance(contract_data[value["table"]], dict):
-            value["value"] = getattr(contract_data[value["table"]][value["document_type"]], value["colum"])
+        model_obj = (contract_data[value["table"]][value["document_type"]]
+                     if isinstance(contract_data[value["table"]], dict)
+                     else contract_data[value["table"]])
+
+        import pdb
+        pdb.set_trace()
+        if value.get("computed"):
+            value["value"] = FORMATTERS[description](model_obj)
         else:
-            value["value"] = getattr(contract_data[value["table"]], value["colum"])
+            value["value"] = getattr(model_obj, value["colum"])
 
     del contract_data
 
