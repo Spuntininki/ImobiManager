@@ -10,6 +10,7 @@ call — regardless of how many columns a formatter consumes.
 """
 
 import re
+from datetime import datetime
 
 from num2words import num2words
 
@@ -78,6 +79,27 @@ def contract_time_desc(contract: Contract) -> str:
         contract.end_date.month - contract.start_date.month
     )
     return f"{months} ({num2words(months, lang='pt_BR')}) meses"
+
+
+def _format_date(dt: datetime) -> str:
+    """Format a datetime as ``DD/MM/YYYY`` (date part only)."""
+    return f"{dt.day:02d}/{dt.month:02d}/{dt.year:04d}"
+
+
+def start_date_desc(contract: Contract) -> str:
+    """Format the contract start date as ``DD/MM/YYYY``.
+
+    Source columns: ``contracts.start_date``.
+    """
+    return _format_date(contract.start_date)
+
+
+def end_date_desc(contract: Contract) -> str:
+    """Format the contract end date as ``DD/MM/YYYY``.
+
+    Source columns: ``contracts.end_date``.
+    """
+    return _format_date(contract.end_date)
 
 
 """Document formatters.

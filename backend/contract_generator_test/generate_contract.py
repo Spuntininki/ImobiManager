@@ -16,8 +16,10 @@ from formatters import (
     contract_generate_date_desc,
     contract_time_desc,
     deposit_months_desc,
+    end_date_desc,
     format_document,
     monthly_revenue_desc,
+    start_date_desc,
 )
 
 from app.db.session import async_session_factory  # noqa: E402
@@ -96,6 +98,8 @@ async def main() -> None:
         "monthly_revenue_string_desc": monthly_revenue_desc,
         "deposit_months_string_desc": deposit_months_desc,
         "contract_generate_date_description": contract_generate_date_desc,
+        "start_date_string": start_date_desc,
+        "end_date_string": end_date_desc,
     }
 
     contract_data = await query_the_contract_data(contract_id=CONTRACT_ID_TO_PROCESS)
