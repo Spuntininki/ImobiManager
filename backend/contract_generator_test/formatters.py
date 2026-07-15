@@ -57,11 +57,51 @@ def local_type_desc(address: Address) -> str:
     never appear in the contract text — this formatter is the single source
     of truth for the pt-BR wording.
     """
+    return _property_phrase(address, "residencial", "comercial")
+
+
+def _property_phrase(address: Address, house: str, commercial: str) -> str:
+    """Shared helper: return ``house`` or ``commercial`` based on property type.
+
+    Centralizes the ``match``/``case`` on ``PropertyType`` so every
+    property-type-dependent phrase token dispatches the same way; adding a
+    future ``PropertyType`` value (e.g. ``RURAL``) is one new ``case`` here,
+    not one per phrase formatter.
+    """
     match address.type:
         case PropertyType.HOUSE:
-            return "residencial"
+            return house
         case PropertyType.COMMERCIAL:
-            return "comercial"
+            return commercial
+
+
+def property_kind(address: Address) -> str:
+    """Noun for the rented unit: 'uma casa' / 'um ponto comercial'.
+
+    Source columns: ``addresses.type``. Used where the contract describes the
+    ceded property ('cede ... uma casa, na ...').
+    """
+    return _property_phrase(address, "uma casa", "um ponto comercial")
+
+
+def purpose_usage(address: Address) -> str:
+    """Destination-usage phrase: 'como residência e domicílio' / 'para fins comerciais'.
+
+    Source columns: ``addresses.type``. Reused on two template lines (the cession
+    clause and the exclusive-use clause) so both flip together when the
+    property type changes — the destination wording can never contradict the
+    ``local_type`` token earlier in the same sentence.
+    """
+    return _property_phrase(address, "como residência e domicílio", "para fins comerciais")
+
+
+def cooccupants(address: Address) -> str:
+    """Who occupies the premises alongside the tenant: 'familiares' / 'funcionários'.
+
+    Source columns: ``addresses.type``. A commercial tenant (a company) has
+    'funcionários' rather than 'familiares'.
+    """
+    return _property_phrase(address, "familiares", "funcionários")
 
 
 def deposit_months_desc(contract: Contract) -> str:

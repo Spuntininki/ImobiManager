@@ -13,6 +13,7 @@ if str(_backend_dir) not in sys.path:
 
 from formatters import (  # noqa: E402
     address_string,
+    cooccupants,
     contract_generate_date_desc,
     contract_time_desc,
     deposit_months_desc,
@@ -20,6 +21,8 @@ from formatters import (  # noqa: E402
     format_document,
     local_type_desc,
     monthly_revenue_desc,
+    property_kind,
+    purpose_usage,
     start_date_desc,
 )
 from render_pdf import render  # noqa: E402
@@ -103,6 +106,9 @@ async def main() -> None:
         "start_date_string": start_date_desc,
         "end_date_string": end_date_desc,
         "local_type": local_type_desc,
+        "property_kind": property_kind,
+        "purpose_usage": purpose_usage,
+        "cooccupants": cooccupants,
     }
 
     contract_data = await query_the_contract_data(contract_id=CONTRACT_ID_TO_PROCESS)
