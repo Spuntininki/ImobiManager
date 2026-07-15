@@ -1,34 +1,33 @@
 import asyncio
 import json
-import sys
 import re
+import sys
 from pathlib import Path
 
-from sqlalchemy import select 
+from sqlalchemy import select
 from sqlalchemy.orm import aliased
 
 _backend_dir = Path(__file__).resolve().parent.parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
 
-from app.models.contract import Contract
-from app.models.renter_document import RenterDocument
-from app.models.owner import Owner
-from app.models.address import Address
-from app.models.owner_document import OwnerDocument
-from app.models.renter import Renter
-
-from app.models.enums import DocumentType
+from formatters import (
+    address_string,
+    contract_generate_date_desc,
+    contract_time_desc,
+    deposit_months_desc,
+    format_document,
+    monthly_revenue_desc,
+)
 
 from app.db.session import async_session_factory  # noqa: E402
-from app.core.config import settings  # noqa: E402
-from formatters import ( 
-    monthly_revenue_desc, 
-    deposit_months_desc,
-    contract_generate_date_desc,
-    address_string,
-    contract_time_desc
-)
+from app.models.address import Address
+from app.models.contract import Contract
+from app.models.enums import DocumentType
+from app.models.owner import Owner
+from app.models.owner_document import OwnerDocument
+from app.models.renter import Renter
+from app.models.renter_document import RenterDocument
 
 
 async def query_the_contract_data(contract_id: int) -> dict:
@@ -88,22 +87,24 @@ async def main() -> None:
     CONTRACT_ID_TO_PROCESS = 2
 
     FORMATTERS = {
+        "owner_cpf": format_document,
+        "owner_rg": format_document,
+        "renter_cpf": format_document,
+        "renter_rg": format_document,
         "contract_time_string_desc": contract_time_desc,
         "address_string": address_string,
         "monthly_revenue_string_desc": monthly_revenue_desc,
         "deposit_months_string_desc": deposit_months_desc,
         "contract_generate_date_description": contract_generate_date_desc,
     }
-    
+
     contract_data = await query_the_contract_data(contract_id=CONTRACT_ID_TO_PROCESS)
-    
+
     for description, value in data["replace"].items():
         model_obj = (contract_data[value["table"]][value["document_type"]]
                      if isinstance(contract_data[value["table"]], dict)
                      else contract_data[value["table"]])
 
-        import pdb
-        pdb.set_trace()
         if value.get("computed"):
             value["value"] = FORMATTERS[description](model_obj)
         else:

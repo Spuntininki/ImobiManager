@@ -55,12 +55,14 @@
         "owner_cpf": {
             "colum": "document",
             "table": "owner_documents",
-            "document_type": "CPF"
+            "document_type": "CPF",
+            "computed": true
         },
         "owner_rg": {
             "colum": "document",
             "table": "owner_documents",
-            "document_type": "RG"
+            "document_type": "RG",
+            "computed": true
         },
         "renter_name": {
             "colum": "name",
@@ -69,12 +71,14 @@
         "renter_cpf": {
             "colum": "document",
             "table": "renter_documents",
-            "document_type": "CPF"
+            "document_type": "CPF",
+            "computed": true
         },
         "renter_rg": {
             "colum": "document",
             "table": "renter_documents",
-            "document_type": "RG"
+            "document_type": "RG",
+            "computed": true
         },
         "contract_time_string_desc": {
             "colum": "start_date",
