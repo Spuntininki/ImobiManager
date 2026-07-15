@@ -1,25 +1,21 @@
 {
-    
-    "paragh_style": {
-     "style": ["Title"],
-     "style_paragraph": ["Normal"],
-     "sign_style": {
-        "name": "Assinatura",
-        "parent": "style_paragraph", 
-        "space_after": 30,
-        "alignment": 0
-        }
+    "title": {
+        "name": "ContractTitle",
+        "parent": "Title"
     },
-    "table_style":[
-            ["ALIGN", [0, 0], [-1, -1], "CENTER"],
-            ["FONTNAME", [0, 0], [-1, -1], "Helvetica-Bold"],
-            ["FONTSIZE", [0, 0], [-1, -1], 12],
-            ["BOTTOMPADDING", [0, 0], [-1, -1], 12],
-            ["TOPPADDING", [0, 0], [-1, -1], 20],
-            ["TEXTCOLOR", [0, 0], [-1, 0], "#000000"],
-            ["TEXTCOLOR", [0, 1], [-1, -1], "#000000"],
-            ["LEFTPADDING", [1, 0], [1, -1], 140]
-        ]
-
+    "paragh": {
+        "name": "ContractBody",
+        "parent": "Normal",
+        "alignment": 4
+    },
+    "sign_table": [
+        ["ALIGN", [0, 0], [-1, -1], "CENTER"],
+        ["FONTNAME", [0, 0], [-1, -1], "Helvetica-Bold"],
+        ["FONTSIZE", [0, 0], [-1, -1], 12],
+        ["BOTTOMPADDING", [0, 0], [-1, -1], 12],
+        ["TOPPADDING", [0, 0], [-1, -1], 20],
+        ["TEXTCOLOR", [0, 0], [-1, 0], "#000000"],
+        ["TEXTCOLOR", [0, 1], [-1, -1], "#000000"],
+        ["LEFTPADDING", [1, 0], [1, -1], 140]
+    ]
 }
-

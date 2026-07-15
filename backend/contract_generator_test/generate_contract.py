@@ -18,6 +18,7 @@ from formatters import (  # noqa: E402
     deposit_months_desc,
     end_date_desc,
     format_document,
+    local_type_desc,
     monthly_revenue_desc,
     start_date_desc,
 )
@@ -101,6 +102,7 @@ async def main() -> None:
         "contract_generate_date_description": contract_generate_date_desc,
         "start_date_string": start_date_desc,
         "end_date_string": end_date_desc,
+        "local_type": local_type_desc,
     }
 
     contract_data = await query_the_contract_data(contract_id=CONTRACT_ID_TO_PROCESS)

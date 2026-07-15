@@ -16,7 +16,7 @@ from num2words import num2words
 
 from app.models.address import Address
 from app.models.contract import Contract
-from app.models.enums import DocumentType
+from app.models.enums import DocumentType, PropertyType
 from app.models.owner_document import OwnerDocument
 from app.models.renter_document import RenterDocument
 
@@ -47,6 +47,21 @@ def address_string(address: Address) -> str:
     if address.complement:
         street = f"{street}, {address.complement}"
     return f"{street}, {address.neighborhood}, {address.city} - {address.state}, {address.zip_code}"
+
+
+def local_type_desc(address: Address) -> str:
+    """Translate the property type to lowercase pt-BR: 'residencial' / 'comercial'.
+
+    Source columns: ``addresses.type`` (a ``PropertyType`` enum). The raw enum
+    values (``HOUSE`` / ``COMMERCIAL``) are internal English identifiers and
+    never appear in the contract text — this formatter is the single source
+    of truth for the pt-BR wording.
+    """
+    match address.type:
+        case PropertyType.HOUSE:
+            return "residencial"
+        case PropertyType.COMMERCIAL:
+            return "comercial"
 
 
 def deposit_months_desc(contract: Contract) -> str:
