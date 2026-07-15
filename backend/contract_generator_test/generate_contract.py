@@ -11,7 +11,7 @@ _backend_dir = Path(__file__).resolve().parent.parent
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
 
-from formatters import (
+from formatters import (  # noqa: E402
     address_string,
     contract_generate_date_desc,
     contract_time_desc,
@@ -21,15 +21,16 @@ from formatters import (
     monthly_revenue_desc,
     start_date_desc,
 )
+from render_pdf import render  # noqa: E402
 
 from app.db.session import async_session_factory  # noqa: E402
-from app.models.address import Address
-from app.models.contract import Contract
-from app.models.enums import DocumentType
-from app.models.owner import Owner
-from app.models.owner_document import OwnerDocument
-from app.models.renter import Renter
-from app.models.renter_document import RenterDocument
+from app.models.address import Address  # noqa: E402
+from app.models.contract import Contract  # noqa: E402
+from app.models.enums import DocumentType  # noqa: E402
+from app.models.owner import Owner  # noqa: E402
+from app.models.owner_document import OwnerDocument  # noqa: E402
+from app.models.renter import Renter  # noqa: E402
+from app.models.renter_document import RenterDocument  # noqa: E402
 
 
 async def query_the_contract_data(contract_id: int) -> dict:
@@ -138,6 +139,14 @@ async def main() -> None:
                 converted_data[content_desc]['lines'].append(filled)
                 converted_data[content_desc]['type'] = content_lines['type']
     print(converted_data)
+
+    style_path = Path(__file__).resolve().parent / "doc_style.json"
+    with style_path.open("r", encoding="utf-8") as arquivo:
+        style_config = json.load(arquivo)
+
+    output_path = Path(__file__).resolve().parent / "contract.pdf"
+    render(converted_data, style_config, output_path)
+    print(f"\nPDF generated: {output_path}")
 
 if __name__ == "__main__":
     asyncio.run(main())
