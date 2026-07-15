@@ -17,7 +17,7 @@ from app.models.address import Address
 def monthly_revenue_desc(value: Decimal) -> str:
     """Write the monthly rent out in words, e.g. 'um mil e quinhentos'."""
     # TODO: real number-to-words in pt-BR
-    return "um mil e quinhentos"
+    return "mil e quinhentos"
 
 
 def deposit_months_desc(months: int) -> str:

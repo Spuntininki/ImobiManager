@@ -91,33 +91,27 @@ async def main() -> None:
     del contract_data
 
     COMPILED_PATTERN = re.compile(r"<REPLACE>(.*?)</REPLACE>")
-    data_to_replace = set()
-    for content_desc, content_lines in data["content"].items():
-        print(content_desc)
-        for line in content_lines["lines"]:
-            if isinstance(line, list):
-                for value in line:
-                    matched_values = COMPILED_PATTERN.findall(value)
-                    data_to_replace.update(matched_values)
-            else:
-                matched_values = COMPILED_PATTERN.findall(line)
-                data_to_replace.update(matched_values)
-
-    print(data_to_replace)
 
     def replacer(match: re.Match) -> str:
         token = match.group(1)
         return str(data["replace"][token]["value"])
-
+    converted_data = {}
     for content_desc, content_lines in data["content"].items():
         print(f"\n[{content_desc}]")
+        converted_data[content_desc] = {
+            "lines": [],
+            "type": ''
+        }
         for line in content_lines["lines"]:
             if isinstance(line, list):
                 filled = [COMPILED_PATTERN.sub(replacer, item) for item in line]
-                print(filled)
+                converted_data[content_desc]['lines'].append(filled)
+                converted_data[content_desc]['type'] = content_lines['type']
             else:
-                print(COMPILED_PATTERN.sub(replacer, line))
-
+                filled = COMPILED_PATTERN.sub(replacer, line)
+                converted_data[content_desc]['lines'].append(filled)
+                converted_data[content_desc]['type'] = content_lines['type']
+    print(converted_data)
 
 if __name__ == "__main__":
     asyncio.run(main())

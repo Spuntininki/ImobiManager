@@ -43,7 +43,7 @@
                 ["______________________", "______________________"],
                 ["<REPLACE>owner_name</REPLACE>" , "<REPLACE>renter_name</REPLACE>"]
             ],
-            "type": "table"
+            "type": "sign"
         } 
 
     },
