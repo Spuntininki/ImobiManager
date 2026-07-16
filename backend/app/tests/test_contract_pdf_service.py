@@ -12,9 +12,14 @@ from datetime import datetime
 from decimal import Decimal
 from types import SimpleNamespace
 
+from app.core.filenames import to_ascii_filename_slug
 from app.models.enums import DocumentType, PropertyType
 from app.services.contract_generation.default_template import load_default_content
-from app.services.contract_pdf_service import FORMATTERS, _fill_tokens
+from app.services.contract_pdf_service import (
+    FORMATTERS,
+    _fill_tokens,
+    build_contract_pdf_filename,
+)
 
 # --- fakes ------------------------------------------------------------------
 
@@ -102,9 +107,7 @@ def test_fill_tokens_with_default_template_substitutes_all_tokens() -> None:
 def test_fill_tokens_does_not_mutate_input_template() -> None:
     """The service must not mutate the row loaded from the DB — copy first."""
     template = load_default_content()
-    snapshot_before = {
-        token: dict(entry) for token, entry in template["replace"].items()
-    }
+    snapshot_before = {token: dict(entry) for token, entry in template["replace"].items()}
     _fill_tokens(template, _contract_data())
     # The original template's replace entries have no "value" key still.
     for token, entry in template["replace"].items():
@@ -142,9 +145,7 @@ def test_fill_tokens_uses_property_phrases_for_house() -> None:
 
 def test_fill_tokens_uses_property_phrases_for_commercial() -> None:
     data = _contract_data()
-    data["addresses"] = SimpleNamespace(
-        **{**vars(_address()), "type": PropertyType.COMMERCIAL}
-    )
+    data["addresses"] = SimpleNamespace(**{**vars(_address()), "type": PropertyType.COMMERCIAL})
     converted = _fill_tokens(load_default_content(), data)
     cession_line = converted["content_lines"]["lines"][3]
     assert "comercial" in cession_line
@@ -188,3 +189,57 @@ def test_every_computed_token_in_default_template_has_a_formatter() -> None:
     for token, entry in template["replace"].items():
         if entry.get("computed"):
             assert token in FORMATTERS, f"Missing formatter for computed token {token!r}"
+
+
+# --- build_contract_pdf_filename --------------------------------------------
+
+
+def test_build_filename_single_token() -> None:
+    assert build_contract_pdf_filename("Maria", 5) == "Contrato-Maria-5.pdf"
+
+
+def test_build_filename_drops_connector_and_deburrs() -> None:
+    """ "João da Silva" → drop "da" → take "João Silva" → deburr → Joao_Silva."""
+    assert build_contract_pdf_filename("João da Silva", 5) == "Contrato-Joao_Silva-5.pdf"
+
+
+def test_build_filename_three_tokens_keeps_first_two_names() -> None:
+    """ "Ana Beatriz Souza" → keep first two names → Ana_Beatriz."""
+    assert build_contract_pdf_filename("Ana Beatriz Souza", 5) == "Contrato-Ana_Beatriz-5.pdf"
+
+
+def test_build_filename_leading_connector_skipped() -> None:
+    """Connector at the front is skipped; first two names are kept."""
+    assert build_contract_pdf_filename("da Silva Costa", 5) == "Contrato-Silva_Costa-5.pdf"
+
+
+def test_build_filename_accented_single_token() -> None:
+    assert build_contract_pdf_filename("Pelé", 5) == "Contrato-Pele-5.pdf"
+
+
+def test_build_filename_strips_illegal_chars() -> None:
+    """Illegal chars are replaced with '_' (adjacent illegal chars collapse to '__')."""
+    assert build_contract_pdf_filename("Ana/B*?Bea", 5) == "Contrato-Ana_B__Bea-5.pdf"
+
+
+def test_build_filename_empty_name_falls_back() -> None:
+    assert build_contract_pdf_filename("", 5) == "Contrato-renter-5.pdf"
+
+
+def test_build_filename_none_name_falls_back() -> None:
+    assert build_contract_pdf_filename(None, 5) == "Contrato-renter-5.pdf"
+
+
+# --- to_ascii_filename_slug --------------------------------------------------
+
+
+def test_slug_deburrs_accents() -> None:
+    assert to_ascii_filename_slug("João") == "Joao"
+
+
+def test_slug_replaces_illegal_chars_and_spaces() -> None:
+    assert to_ascii_filename_slug('a/b c:"d') == "a_b_c__d"
+
+
+def test_slug_all_non_ascii_returns_empty() -> None:
+    assert to_ascii_filename_slug("日本") == ""

@@ -1,8 +1,6 @@
 """HTTP endpoints for the Contract resource (owner-scoped, partial updates)."""
 
 import io
-import re
-import unicodedata
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -23,34 +21,6 @@ from app.services import contract_pdf_service, contract_service
 from app.services.contract_service import ContractRelationError
 
 router = APIRouter(tags=["contracts"])
-
-
-# Characters disallowed in filenames across common filesystems.
-_ILLEGAL_FILENAME_CHARS = re.compile(r'[\x00-\x1f<>:"/\\|?*]')
-
-
-# Portuguese name connector particles — dropped so the filename keeps the
-# first two *names* (e.g. "João da Silva" → "Joao_Silva", not "Joao_da").
-_NAME_CONNECTORS = frozenset({"da", "de", "do", "das", "dos", "e"})
-
-
-def _sanitize_renter_name(name: str, fallback: str) -> str:
-    """Reduce a renter name to a filename-safe ASCII slug.
-
-    Take the first two name tokens (skipping connector particles like "da"),
-    deburr accents to their ASCII base, replace illegal filename chars with
-    ``_``, and return the result. Returns ``fallback`` if the name has no
-    usable tokens (defensive only — the DB enforces non-empty names).
-    """
-    tokens = [t for t in name.split() if t.lower() not in _NAME_CONNECTORS][:2]
-    if not tokens:
-        return fallback
-    base = " ".join(tokens)
-    # NFKD puts combining marks on their own code points; drop them to deburr.
-    deburred = unicodedata.normalize("NFKD", base)
-    ascii_str = deburred.encode("ascii", "ignore").decode("ascii")
-    sanitized = _ILLEGAL_FILENAME_CHARS.sub("_", ascii_str)
-    return sanitized.replace(" ", "_") or fallback
 
 
 # --- Nested under owners: create + list ---
@@ -115,9 +85,10 @@ async def get_contract_pdf(
     caller must be linked to the contract's owner. The response uses
     ``Content-Disposition: attachment; filename="Contrato-<renter>-<id>.pdf"``
     so the browser triggers a download dialog with a friendly, unique name.
-    The renter portion comes from the first two name tokens, deburred to
-    ASCII (e.g. "João da Silva" → "Joao_Silva"); the contract id guarantees
-    uniqueness across same-name renters.
+    The filename is built by ``contract_pdf_service.build_contract_pdf_filename``
+    from the first two name tokens (deburred to ASCII, e.g. "João da Silva" →
+    "Joao_Silva") plus the contract id; the fallback is
+    ``Contrato-renter-<id>.pdf`` when the name has no usable tokens.
 
     A ``?template_code=`` query param overrides the default ``standard``
     template, allowing future commercial/rural variants once seeded.
@@ -146,8 +117,7 @@ async def get_contract_pdf(
     # here. Fetch the name in a cheap scalar query rather than widening the
     # contract_pdf_service return type.
     renter_name = await session.scalar(select(Renter.name).where(Renter.id == contract.renter_id))
-    safe_name = _sanitize_renter_name(renter_name or "", fallback=f"contract-{contract.id}")
-    filename = f"Contrato-{safe_name}-{contract.id}.pdf"
+    filename = contract_pdf_service.build_contract_pdf_filename(renter_name, contract.id)
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",

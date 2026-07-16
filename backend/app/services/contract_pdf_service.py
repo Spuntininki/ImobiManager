@@ -14,6 +14,9 @@ Composes the three concerns from ``contract_generation`` against an injected
    ``style`` dict.
 
 The public entrypoint is ``generate_contract_pdf``.
+``build_contract_pdf_filename`` builds the download filename for a contract
+PDF (renter-name → ASCII slug + contract id), composing the generic slug
+primitive from ``app.core.filenames`` with a renter-name domain rule.
 """
 
 import re
@@ -22,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.filenames import to_ascii_filename_slug
 from app.models.address import Address
 from app.models.contract import Contract
 from app.models.contract_template import ContractTemplate
@@ -33,6 +37,11 @@ from app.models.renter_document import RenterDocument
 from app.services.contract_generation import formatters
 from app.services.contract_generation.renderer import render
 from app.services.contract_generation.validation import validate_template
+
+# Portuguese name connector particles — dropped so the contract PDF filename
+# keeps the first two *names* (e.g. "João da Silva" → "Joao_Silva", not
+# "Joao_da"). Lives here because this is a renter-name presentation rule.
+_NAME_CONNECTORS = frozenset({"da", "de", "do", "das", "dos", "e"})
 
 # Token → formatter dispatch table. JSON decides routing via the ``computed``
 # flag; this dict is the single place that knows which Python function handles
@@ -75,20 +84,17 @@ async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
     RenterDocRG = aliased(RenterDocument)
 
     stmt = (
-        select(Contract, Owner, Renter, Address,
-               OwnerDocCPF, OwnerDocRG, RenterDocCPF, RenterDocRG)
+        select(Contract, Owner, Renter, Address, OwnerDocCPF, OwnerDocRG, RenterDocCPF, RenterDocRG)
         .join(Owner, Contract.owner_id == Owner.id)
         .join(Renter, Contract.renter_id == Renter.id)
         .join(Address, Contract.address_id == Address.id)
         .outerjoin(
             OwnerDocCPF,
-            (OwnerDocCPF.owner_id == Owner.id)
-            & (OwnerDocCPF.document_type == DocumentType.CPF),
+            (OwnerDocCPF.owner_id == Owner.id) & (OwnerDocCPF.document_type == DocumentType.CPF),
         )
         .outerjoin(
             OwnerDocRG,
-            (OwnerDocRG.owner_id == Owner.id)
-            & (OwnerDocRG.document_type == DocumentType.RG),
+            (OwnerDocRG.owner_id == Owner.id) & (OwnerDocRG.document_type == DocumentType.RG),
         )
         .outerjoin(
             RenterDocCPF,
@@ -97,8 +103,7 @@ async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
         )
         .outerjoin(
             RenterDocRG,
-            (RenterDocRG.renter_id == Renter.id)
-            & (RenterDocRG.document_type == DocumentType.RG),
+            (RenterDocRG.renter_id == Renter.id) & (RenterDocRG.document_type == DocumentType.RG),
         )
         .where(Contract.id == contract_id)
     )
@@ -158,9 +163,7 @@ def _fill_tokens(template: dict, contract_data: dict) -> dict:
     # Copy the template so we never mutate the row loaded from the DB.
     working = {
         "content": template["content"],
-        "replace": {
-            token: dict(entry) for token, entry in template["replace"].items()
-        },
+        "replace": {token: dict(entry) for token, entry in template["replace"].items()},
     }
 
     for token, entry in working["replace"].items():
@@ -224,3 +227,19 @@ async def generate_contract_pdf(
     contract_data = await _fetch_contract_data(session, contract_id)
     converted_data = _fill_tokens(template_row.content, contract_data)
     return render(converted_data, template_row.style)
+
+
+def build_contract_pdf_filename(renter_name: str | None, contract_id: int) -> str:
+    """Build the download filename for a contract PDF.
+
+    Reduces ``renter_name`` to its first two non-connector tokens (so
+    "João da Silva" → "Joao_Silva", dropping the pt-BR particle "da"),
+    deburrs accents to ASCII via ``to_ascii_filename_slug``, and combines
+    with the contract id for uniqueness: ``Contrato-<slug>-<contract_id>.pdf``.
+    Falls back to ``Contrato-renter-<contract_id>.pdf`` when the name has no
+    usable tokens (defensive only — the DB enforces non-empty names).
+    """
+    tokens = [t for t in (renter_name or "").split() if t.lower() not in _NAME_CONNECTORS][:2]
+    slug = to_ascii_filename_slug(" ".join(tokens))
+    name_part = slug or "renter"
+    return f"Contrato-{name_part}-{contract_id}.pdf"
