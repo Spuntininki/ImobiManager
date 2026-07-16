@@ -90,9 +90,7 @@ def test_render_returns_bytes_not_str() -> None:
 def test_render_handles_bold_markup_in_lines() -> None:
     """ReportLab Paragraph understands <b>...</b> inline; verify no exception."""
     data = _converted_data()
-    data["content_lines"]["lines"] = [
-        "Texto com <b>negrito</b> e <i>itálico</i> para o gerador."
-    ]
+    data["content_lines"]["lines"] = ["Texto com <b>negrito</b> e <i>itálico</i> para o gerador."]
     pdf = render(data, _style_config())
     assert pdf.startswith(b"%PDF-")
 

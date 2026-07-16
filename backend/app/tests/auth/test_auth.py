@@ -49,9 +49,7 @@ async def test_login_unknown_email(client: AsyncClient) -> None:
 async def _auth_headers(
     client: AsyncClient, email: str = "user@test.com", password: str = "secret"
 ) -> dict[str, str]:
-    resp = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": password}
-    )
+    resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 

@@ -34,9 +34,7 @@ async def _auth_headers(
     return {"Authorization": f"Bearer {token}"}
 
 
-async def _create_owner(
-    session: AsyncSession, user: User, name: str = "Owner One"
-) -> Owner:
+async def _create_owner(session: AsyncSession, user: User, name: str = "Owner One") -> Owner:
     owner = Owner(name=name)
     session.add(owner)
     await session.flush()
@@ -118,9 +116,7 @@ async def test_revenue_timeline_for_unmanaged_owner_404(
     other = Owner(name="Someone Elses")
     db_session.add(other)
     await db_session.commit()
-    response = await client.get(
-        f"/api/v1/owners/{other.id}/revenue-timeline", headers=headers
-    )
+    response = await client.get(f"/api/v1/owners/{other.id}/revenue-timeline", headers=headers)
     assert response.status_code == 404
 
 
@@ -288,9 +284,7 @@ async def test_revenue_timeline_respects_payment_day(
     assert first_payment > start
 
 
-async def test_revenue_timeline_summary(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_revenue_timeline_summary(client: AsyncClient, db_session: AsyncSession) -> None:
     user = await _create_user(db_session)
     headers = await _auth_headers(client)
     owner = await _create_owner(db_session, user)

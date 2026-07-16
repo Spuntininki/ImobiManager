@@ -131,18 +131,12 @@ def test_contract_time_desc_multi_year_span() -> None:
 
 
 def test_address_string_without_complement() -> None:
-    assert (
-        address_string(_address())
-        == "Rua das Flores, 123, Centro, São Paulo - SP, 01234-567"
-    )
+    assert address_string(_address()) == "Rua das Flores, 123, Centro, São Paulo - SP, 01234-567"
 
 
 def test_address_string_with_complement() -> None:
     addr = _address(complement="Apto 45")
-    assert (
-        address_string(addr)
-        == "Rua das Flores, 123, Apto 45, Centro, São Paulo - SP, 01234-567"
-    )
+    assert address_string(addr) == "Rua das Flores, 123, Apto 45, Centro, São Paulo - SP, 01234-567"
 
 
 def test_address_string_empty_complement_omitted() -> None:

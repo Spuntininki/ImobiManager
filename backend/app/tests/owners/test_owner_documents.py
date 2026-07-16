@@ -12,7 +12,6 @@ _VALID_CPF_2 = "12345678909"
 _VALID_CNPJ = "11222333000181"
 
 
-
 async def _create_user(
     session: AsyncSession, email: str = "user@test.com", password: str = "secret"
 ) -> User:

@@ -12,7 +12,6 @@ Two layers:
   seed and the test fixture alike.
 """
 
-
 import pytest
 
 from app.services.contract_generation.default_template import (
