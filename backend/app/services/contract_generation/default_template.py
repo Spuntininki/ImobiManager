@@ -1,0 +1,211 @@
+"""Default contract template and style — single source of truth for seeding.
+
+Contains the JSON content of the contract template (``doc_content`` shape) and
+style (``doc_style`` shape) as triple-quoted string literals. The Alembic
+migration that creates the ``contract_templates`` table imports these to seed
+the 'standard' row; the test fixture imports the same constants so the seeded
+row in tests is byte-identical to the migration seed.
+
+This is NOT a runtime source of truth — at runtime the pipeline reads templates
+from the ``contract_templates`` table (Postgres JSONB). These strings exist so
+the same seed payload flows into both the migration and the test fixture
+without duplicating ~150 lines of JSON.
+
+To edit the default contract wording, edit the JSON text below and run a new
+migration that UPDATEs the 'standard' row (or re-seeds on a fresh DB).
+"""
+
+import json
+
+# Identifier for the default template row.
+STANDARD_TEMPLATE_CODE = "standard"
+STANDARD_TEMPLATE_DESCRIPTION = "Contrato de locação padrão"
+
+
+# The default contract template (doc_content.json shape), inlined as a
+# triple-quoted string so the migration is self-contained and re-runnable
+# without external files. Kept as raw JSON text — not Python dict literals —
+# so it remains diffable against the source-of-truth JSON.
+DEFAULT_CONTENT_JSON = """
+{
+    "content": {
+        "title_lines": {
+            "lines": ["CONTRATO DE LOCAÇÃO"],
+            "type": "title"
+
+        },
+        "content_lines": {
+            "lines": [
+                "<b><REPLACE>owner_name</REPLACE>, (CPF) <REPLACE>owner_cpf</REPLACE></b>, Cédula de identidade <b><REPLACE>owner_rg</REPLACE></b> doravante denominado <b>LOCADOR(A)</b>",
+                "<b><REPLACE>renter_name</REPLACE> (CPF) <REPLACE>renter_cpf</REPLACE></b>, Cédula de identidade <b><REPLACE>renter_rg</REPLACE></b> doravante denominado <b>LOCATÁRIO(A)</b>",
+                "Celebram o presente contrato de locação <REPLACE>local_type</REPLACE>, com as cláusulas e condições seguintes:",
+                "O <b>LOCADOR</b> cede para locação <REPLACE>local_type</REPLACE> ao <b>LOCATÁRIO</b>, <REPLACE>property_kind</REPLACE>, na <b><REPLACE>address_string</REPLACE></b>. A locação destina-se ao uso exclusivo <REPLACE>purpose_usage</REPLACE> do <b>LOCATÁRIO</b>.",
+                "O prazo de locação é de <b><REPLACE>contract_time_string_desc</REPLACE></b>, iniciando-se em <b><REPLACE>start_date_string</REPLACE></b> e terminando em <b><REPLACE>end_date_string</REPLACE></b>, limite de tempo em que o imóvel objeto do presente deverá ser restituído independentemente de qualquer notificação ou interpelação sob pena de caracterizar infração contratual.",
+                "O aluguel mensal será de <b>R$ <REPLACE>monthly_revenue_decimal</REPLACE> (<REPLACE>monthly_revenue_string_desc</REPLACE> reais)</b> e deverá ser pago até a data de seu vencimento, todo dia <b><REPLACE>due_day</REPLACE> de cada mês</b> do mês seguinte ao vencido, no local do endereço do <b>LOCADOR</b> ou outro que o mesmo venha a designar.",
+                "<b>Obs. (<REPLACE>deposit_months_string_desc</REPLACE>)</b>",
+                "A impontualidade acarretará juros moratórios na base de 1% (um por cento) ao mês calculado sobre o valor do aluguel. O atraso superior a 30 (trinta) dias implicará em correção monetária do valor do aluguel e encargos de cobrança correspondentes a 10% (dez por cento) do valor assim corrigido.",
+                "O pagamento de qualquer dos aluguéis não implica em renúncia do direito de cobrança de eventuais diferenças de aluguéis, de encargos ou impostos que oportunamente não tiverem sidos lançados nos respectivos recibos.",
+                "O aluguel será reajustado anualmente pela variação do <b>ÍNDICE</b> (exemplo: IGP-M, INPC-IBGE, etc.). Entretanto, se em virtude de lei subsequente vier a ser admitida a correção e periodicidade inferior a prevista na legislação vigente à época de sua celebração, que é anual, concordam as partes desde já e em caráter irrevogável que a correção do aluguel e o seu indexador passará automaticamente a ser feito no menor prazo que for permitido pela lei posterior e pelo maior índice vigente dentre os permitidos pelo Governo Federal e que venha a refletir a variação do período.",
+                "Havendo prorrogação tácita ou expressa do presente contrato o mesmo será reajustado a preço de mercado sem qualquer relação com o patamar aqui pactuado a ser estabelecido pelo <b>LOCADOR</b>, que poderá ainda estipular, de comum acordo com o <b>LOCATÁRIO</b>, o índice de reajuste e periodicidade.",
+                "Nas cobranças judiciais e extrajudiciais de alugueis em atraso os mesmos serão acrescidos de juros de mora, atualização monetária e honorários advocatícios, na base de 20% ( vinte por cento ) sendo que qualquer recebimento feito pelo <b>LOCADOR</b> fora dos prazos e condições convencionais neste contrato, será havido como mera tolerância e não induzirá novação bem como resgate de recibos posteriores não significará quitação de aluguéis e outras obrigações contratuais deixadas de quitar nas épocas certas.",
+                "O imóvel da presente locação destina-se ao uso exclusivo <REPLACE>purpose_usage</REPLACE> do <b>LOCATÁRIO</b>, não sendo permitida a transferência, sublocação, cessão ou empréstimo no todo ou em parte, sem a prévia e expressa autorização do <b>LOCADOR</b>.",
+                "Além do aluguel são de responsabilidade do <b>LOCATÁRIO</b> as despesas com consumo de luz, água, esgoto, seguro contra incêndio, imposto predial e todas as demais taxas ou impostos, tributos municipais e encargos da locação, que venham a incidir sobre o imóvel, inclusive taxa de condomínio, que deverão ser pagas diretamente pela mesma, o qual ficará obrigada a apresentar os comprovantes de quitação juntamente com o pagamento do aluguel.",
+                "O <b>LOCATÁRIO</b> declara neste ato tomar conhecimento da existência de regras estabelecidas na <b>CONVENÇÃO DE CONDOMÍNIOS</b> e compromete-se a respeitá-las e cumpri-las, juntamente com seus <REPLACE>cooccupants</REPLACE> e prepostos, sob pena de rescisão contratual.",
+                "Encerrada a locação a entrega das chaves só será processada mediante exibição ao <b>LOCADOR</b>, dos comprovantes de quitação das despesas e encargos da locação referidos nas cláusulas anteriores, inclusive corte final de luz.",
+                "Fica facultado ao <b>LOCADOR</b> ou ao seu representante legal vistoriar o imóvel sempre que julgar necessário.",
+                "O <b>LOCATÁRIO</b> se obriga, sob pena de cometer infração contratual, a comunicar por escrito ao <b>LOCADOR</b>, com antecipação mínima de 30 (trinta) dias, a sua intenção de devolver o imóvel antes do prazo aqui previsto.",
+                "O <b>LOCATÁRIO</b> assume o compromisso de solicitar ao <b>LOCADOR</b> uma vistoria 30 (trinta) dias antes de desocupar o imóvel para ser constatado o estado de conservação do mesmo.",
+                "Quaisquer modificações no imóvel locadas só poderão ser feitas com expressa autorização do <b>LOCADOR</b>. Aderem ao mesmo as benfeitorias sejam elas úteis, necessárias ou voluntárias independentes de sua natureza, não cabendo direito de indenização, retenção, compensação ou reembolso.",
+                "Fica convencionado que a parte que infringir o presente contrato em qualquer dos seus termos, se sujeita ao pagamento em benefício da outra, da multa contratual correspondente a 1 (uma) vez o valor do aluguel vigente à época da infração, tantas vezes forem as infrações praticadas, sem prejuízo da resolução contratual e demais comunicações previstas neste instrumento.",
+                "Se o <b>LOCATÁRIO</b> vier a usar da faculdade que lhe confere o contido no artigo 4º da Lei n º 8.245/1991 e devolver o imóvel antes do vencimento do prazo ajustado, pagará a multa compensatória equivalente a 2 (duas) vezes o valor do aluguel vigente, reduzido proporcionalmente ao tempo do contrato já cumprido.",
+                "Permanecendo o <b>LOCATÁRIO</b> no imóvel após o prazo de desocupação voluntária nos casos de denúncia condicionada, pagará ele o aluguel pena que vier a ser arbitrado na notificação premonitória na forma de que dispõe o artigo 575 do Novo Código Civil Brasileiro, o mesmo ocorrendo no caso de mútuo acordo nos termos do artigo 9, inciso I da Lei n º 8.245/1991, quando a desocupação não se verificar na data convencionada.",
+                "No caso do imóvel ser posto à venda, o <b>LOCATÁRIO</b> declara que não possui interesse em sua aquisição, renunciando expressamente ao eventual direito de preferência e autoriza desde já, a visita de interessados, em horários previamente convencionados.",
+                "O <b>LOCATÁRIO</b> declara, para todos os fins e efeitos de direito, que recebe o imóvel locado em condições plenas de uso, em perfeito estado de conservação, higiene e limpeza, obrigando-se e comprometendo-se a devolvê-lo em iguais condições, independentemente de qualquer aviso ou notificação prévia, e qualquer que seja o motivo da devolução, sob pena de incorrer nas cominações previstas neste contrato ou estipuladas em lei, além da obrigação de indenizar por danos ou prejuízos decorrentes da inobservância desta obrigação, salvo as deteriorações decorrentes de uso normal do imóvel.",
+                "Elegem as partes o foro do domicílio do <b>LOCADOR</b>, para dirimir quaisquer dúvidas oriundas do presente contrato, renunciando a qualquer outro por mais privilegiado que seja.",
+                "<b>São Paulo, <REPLACE>contract_generate_date_description</REPLACE></b>"
+            ],
+            "type": "paragh"
+        },
+        "sign_lines": {
+            "lines":   [
+                ["LOCADOR", "LOCATÁRIO"],
+                ["______________________", "______________________"],
+                ["<REPLACE>owner_name</REPLACE>" , "<REPLACE>renter_name</REPLACE>"]
+            ],
+            "type": "sign"
+        }
+
+    },
+    "replace": {
+        "local_type": {
+            "colum": "type",
+            "table": "addresses",
+            "computed": true
+        },
+        "property_kind": {
+            "colum": "type",
+            "table": "addresses",
+            "computed": true
+        },
+        "purpose_usage": {
+            "colum": "type",
+            "table": "addresses",
+            "computed": true
+        },
+        "cooccupants": {
+            "colum": "type",
+            "table": "addresses",
+            "computed": true
+        },
+        "owner_name": {
+            "colum": "name",
+            "table": "owners"
+        },
+        "owner_cpf": {
+            "colum": "document",
+            "table": "owner_documents",
+            "document_type": "CPF",
+            "computed": true
+        },
+        "owner_rg": {
+            "colum": "document",
+            "table": "owner_documents",
+            "document_type": "RG",
+            "computed": true
+        },
+        "renter_name": {
+            "colum": "name",
+            "table": "renters"
+        },
+        "renter_cpf": {
+            "colum": "document",
+            "table": "renter_documents",
+            "document_type": "CPF",
+            "computed": true
+        },
+        "renter_rg": {
+            "colum": "document",
+            "table": "renter_documents",
+            "document_type": "RG",
+            "computed": true
+        },
+        "contract_time_string_desc": {
+            "colum": "start_date",
+            "table": "contracts",
+            "computed": true
+        },
+        "address_string": {
+            "colum": "street_name",
+            "table": "addresses",
+            "computed": true
+        },
+        "start_date_string": {
+            "colum": "start_date",
+            "table": "contracts",
+            "computed": true
+        },
+        "end_date_string": {
+            "colum": "end_date",
+            "table": "contracts",
+            "computed": true
+        },
+        "monthly_revenue_decimal": {
+            "colum": "monthly_revenue",
+            "table": "contracts"
+        },
+        "monthly_revenue_string_desc": {
+            "colum": "monthly_revenue",
+            "table": "contracts",
+            "computed": true
+        },
+        "due_day": {
+            "colum": "payment_day",
+            "table": "contracts"
+        },
+        "deposit_months_string_desc": {
+            "colum": "deposit_months",
+            "table": "contracts",
+            "computed": true
+        },
+        "contract_generate_date_description": {
+            "colum": "generation_date",
+            "table": "contracts",
+            "computed": true
+        }
+    }
+}"""
+
+
+# The default contract style (doc_style.json shape).
+DEFAULT_STYLE_JSON = """
+{
+    "title": {
+        "name": "ContractTitle",
+        "parent": "Title"
+    },
+    "paragh": {
+        "name": "ContractBody",
+        "parent": "Normal",
+        "alignment": 4
+    },
+    "sign_table": [
+        ["ALIGN", [0, 0], [-1, -1], "CENTER"],
+        ["FONTNAME", [0, 0], [-1, -1], "Helvetica-Bold"],
+        ["FONTSIZE", [0, 0], [-1, -1], 12],
+        ["BOTTOMPADDING", [0, 0], [-1, -1], 12],
+        ["TOPPADDING", [0, 0], [-1, -1], 20],
+        ["TEXTCOLOR", [0, 0], [-1, 0], "#000000"],
+        ["TEXTCOLOR", [0, 1], [-1, -1], "#000000"],
+        ["LEFTPADDING", [1, 0], [1, -1], 140]
+    ]
+}"""
+
+
+def load_default_content() -> dict:
+    """Return the default contract template content as a parsed dict."""
+    return json.loads(DEFAULT_CONTENT_JSON)
+
+
+def load_default_style() -> dict:
+    """Return the default contract style as a parsed dict."""
+    return json.loads(DEFAULT_STYLE_JSON)

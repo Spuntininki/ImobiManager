@@ -1,6 +1,10 @@
 """HTTP endpoints for the Contract resource (owner-scoped, partial updates)."""
 
+import io
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import (
@@ -11,7 +15,7 @@ from app.db.session import get_db
 from app.models.contract import Contract
 from app.models.user import User
 from app.schemas.contract import ContractCreate, ContractRead, ContractUpdate
-from app.services import contract_service
+from app.services import contract_pdf_service, contract_service
 from app.services.contract_service import ContractRelationError
 
 router = APIRouter(tags=["contracts"])
@@ -62,6 +66,55 @@ async def get_contract(
     contract: Contract = Depends(get_current_active_contract),
 ) -> ContractRead:
     return ContractRead.model_validate(contract)
+
+
+@router.get(
+    "/contracts/{contract_id}/pdf",
+    response_class=StreamingResponse,
+)
+async def get_contract_pdf(
+    contract: Contract = Depends(get_current_active_contract),
+    session: AsyncSession = Depends(get_db),
+    template_code: str = "standard",
+) -> StreamingResponse:
+    """Stream the rendered contract PDF back to the browser.
+
+    Auth/permission scoping reuses ``get_current_active_contract`` — the
+    caller must be linked to the contract's owner. Returns the PDF inline
+    (``Content-Disposition: inline``) so the browser displays it rather
+    than triggering a download dialog. Switch to ``attachment; filename=...``
+    if a download UX is desired later.
+
+    A ``?template_code=`` query param overrides the default ``standard``
+    template, allowing future commercial/rural variants once seeded.
+    """
+    try:
+        pdf_bytes = await contract_pdf_service.generate_contract_pdf(
+            session, contract.id, template_code
+        )
+    except NoResultFound:
+        # The join query in the pipeline raised — contract vanished between
+        # the dependency check and here. Treat as 404 to stay consistent
+        # with the rest of the resource.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found"
+        ) from None
+    except ValueError as e:
+        # ValueError from the pipeline signals a configuration/data problem
+        # (missing template row, missing required document on the contract,
+        # template/formatter drift). Surface as 422 so clients see it as a
+        # validation/contract-state issue rather than a generic 500.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(e),
+        ) from None
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="contract-{contract.id}.pdf"'
+        },
+    )
 
 
 @router.patch("/contracts/{contract_id}", response_model=ContractRead)

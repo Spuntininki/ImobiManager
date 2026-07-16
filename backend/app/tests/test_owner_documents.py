@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.models.owner import Owner
 from app.models.user import User
+
 _VALID_CPF = "52998224725"
 _VALID_CPF_2 = "12345678909"
 _VALID_CNPJ = "11222333000181"
