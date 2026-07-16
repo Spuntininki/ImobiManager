@@ -90,7 +90,6 @@ async def update_contract(
     session: AsyncSession,
     contract_id: int,
     payload: ContractUpdate,
-    owner_id: int,
 ) -> Contract | None:
     """Patch a contract by id (partial update). Returns None if not found.
 

@@ -1,22 +1,9 @@
 """Contract PDF generation pipeline — orchestrates fetch + fill + render.
 
-Composes the three concerns from ``contract_generation`` against an injected
-``AsyncSession``:
-
-1. ``_fetch_contract_data`` — single-join query that loads the contract plus
-   its owner, renter, address, and the four document rows (owner/renter ×
-   CPF/RG). Returns a dict keyed by table name so token lookup stays O(1).
-2. ``_fill_tokens`` — pure function that walks the template's ``replace``
-   entries, dispatching each to either a registered formatter (``computed``)
-   or a plain ``getattr`` (pass-through), then substitutes the values into
-   the section lines, producing ``converted_data`` ready for the renderer.
-3. ``render`` — produces PDF bytes from ``converted_data`` + the template's
-   ``style`` dict.
-
-The public entrypoint is ``generate_contract_pdf``.
-``build_contract_pdf_filename`` builds the download filename for a contract
-PDF (renter-name → ASCII slug + contract id), composing the generic slug
-primitive from ``app.core.filenames`` with a renter-name domain rule.
+Composes the pieces from the ``contract_generation`` package (see its
+docstring for the pipeline overview) against an injected ``AsyncSession``.
+``generate_contract_pdf`` is the public entrypoint; ``build_contract_pdf_filename``
+builds the download filename (renter-name → ASCII slug + contract id).
 """
 
 import re
@@ -36,7 +23,11 @@ from app.models.renter import Renter
 from app.models.renter_document import RenterDocument
 from app.services.contract_generation import formatters
 from app.services.contract_generation.renderer import render
-from app.services.contract_generation.validation import validate_template
+from app.services.contract_generation.validation import (
+    TOKEN_RE,
+    ContractNotFoundError,
+    validate_template,
+)
 
 # Portuguese name connector particles — dropped so the contract PDF filename
 # keeps the first two *names* (e.g. "João da Silva" → "Joao_Silva", not
@@ -64,10 +55,6 @@ FORMATTERS = {
     "cooccupants": formatters.cooccupants,
 }
 
-# Matches ``<REPLACE>token</REPLACE>`` tokens in template lines.
-_TOKEN_RE = re.compile(r"<REPLACE>(.*?)</REPLACE>")
-
-
 async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
     """Load a contract + all related rows in a single join.
 
@@ -75,8 +62,8 @@ async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
     tables are nested sub-dicts keyed by ``document_type`` (CPF / RG) because
     the same table is joined once per type.
 
-    Raises ``sqlalchemy.exc.NoResultFound`` if the contract does not exist —
-    the endpoint translates that to 404.
+    Raises ``ContractNotFoundError`` if the contract does not exist — the
+    endpoint translates that to 404.
     """
     OwnerDocCPF = aliased(OwnerDocument)
     OwnerDocRG = aliased(OwnerDocument)
@@ -108,7 +95,9 @@ async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
         .where(Contract.id == contract_id)
     )
     result = await session.execute(stmt)
-    row = result.one()
+    row = result.one_or_none()
+    if row is None:
+        raise ContractNotFoundError(f"Contract {contract_id} not found")
 
     (
         contract,
@@ -187,9 +176,9 @@ def _fill_tokens(template: dict, contract_data: dict) -> dict:
         lines: list = []
         for line in section["lines"]:
             if isinstance(line, list):
-                lines.append([_TOKEN_RE.sub(replacer, item) for item in line])
+                lines.append([TOKEN_RE.sub(replacer, item) for item in line])
             else:
-                lines.append(_TOKEN_RE.sub(replacer, line))
+                lines.append(TOKEN_RE.sub(replacer, line))
         converted_data[section_name] = {"lines": lines, "type": section["type"]}
     return converted_data
 
@@ -207,7 +196,7 @@ async def generate_contract_pdf(
     Raises:
         ValueError: if the template row is missing/inactive or a required
             document is absent on the contract.
-        sqlalchemy.exc.NoResultFound: if ``contract_id`` does not exist.
+        ContractNotFoundError: if ``contract_id`` does not exist.
     """
     template_row = await session.scalar(
         select(ContractTemplate).where(

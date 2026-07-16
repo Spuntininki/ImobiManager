@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import get_current_active_owner, get_current_user
 from app.db.session import get_db
+from app.models.owner import Owner
 from app.models.user import User
 from app.schemas.owner import OwnerCreate, OwnerRead, OwnerUpdate
 from app.services import owner_service
@@ -33,13 +34,8 @@ async def list_owners(
 
 @router.get("/{owner_id}", response_model=OwnerRead)
 async def get_owner(
-    owner_id: int,
-    _user: User = Depends(get_current_active_owner),
-    session: AsyncSession = Depends(get_db),
+    owner: Owner = Depends(get_current_active_owner),
 ) -> OwnerRead:
-    owner = await owner_service.get_owner(session, owner_id)
-    if owner is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found")
     return OwnerRead.model_validate(owner)
 
 
@@ -47,19 +43,19 @@ async def get_owner(
 async def update_owner(
     owner_id: int,
     payload: OwnerUpdate,
-    _user: User = Depends(get_current_active_owner),
+    owner: Owner = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> OwnerRead:
-    owner = await owner_service.update_owner(session, owner_id, payload)
-    if owner is None:
+    updated = await owner_service.update_owner(session, owner_id, payload)
+    if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found")
-    return OwnerRead.model_validate(owner)
+    return OwnerRead.model_validate(updated)
 
 
 @router.delete("/{owner_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_owner(
     owner_id: int,
-    _user: User = Depends(get_current_active_owner),
+    owner: Owner = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> None:
     deleted = await owner_service.delete_owner(session, owner_id)

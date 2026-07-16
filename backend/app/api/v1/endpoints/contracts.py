@@ -5,7 +5,6 @@ import io
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import (
@@ -14,10 +13,11 @@ from app.api.v1.dependencies import (
 )
 from app.db.session import get_db
 from app.models.contract import Contract
+from app.models.owner import Owner
 from app.models.renter import Renter
-from app.models.user import User
 from app.schemas.contract import ContractCreate, ContractRead, ContractUpdate
 from app.services import contract_pdf_service, contract_service
+from app.services.contract_generation.validation import ContractNotFoundError
 from app.services.contract_service import ContractRelationError
 
 router = APIRouter(tags=["contracts"])
@@ -34,7 +34,7 @@ router = APIRouter(tags=["contracts"])
 async def create_contract(
     owner_id: int,
     payload: ContractCreate,
-    _user: User = Depends(get_current_active_owner),
+    _owner: Owner = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> ContractRead:
     try:
@@ -53,7 +53,7 @@ async def create_contract(
 )
 async def list_contracts_for_owner(
     owner_id: int,
-    _user: User = Depends(get_current_active_owner),
+    _owner: Owner = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> list[ContractRead]:
     contracts = await contract_service.list_contracts_for_owner(session, owner_id)
@@ -97,10 +97,9 @@ async def get_contract_pdf(
         pdf_bytes = await contract_pdf_service.generate_contract_pdf(
             session, contract.id, template_code
         )
-    except NoResultFound:
-        # The join query in the pipeline raised — contract vanished between
-        # the dependency check and here. Treat as 404 to stay consistent
-        # with the rest of the resource.
+    except ContractNotFoundError:
+        # The contract vanished between the dependency check and the pipeline
+        # join. Treat as 404 to stay consistent with the rest of the resource.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found"
         ) from None
@@ -134,7 +133,7 @@ async def update_contract(
 ) -> ContractRead:
     try:
         updated = await contract_service.update_contract(
-            session, contract_id, payload, _contract.owner_id
+            session, contract_id, payload
         )
     except ContractRelationError as e:
         raise HTTPException(

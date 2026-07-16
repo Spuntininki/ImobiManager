@@ -9,6 +9,8 @@ from app.core.auth import decode_access_token
 from app.db.session import get_db
 from app.models.address import Address
 from app.models.contract import Contract
+from app.models.owner import Owner
+from app.models.owner_renter import OwnerRenter
 from app.models.renter import Renter
 from app.models.user import User
 from app.models.user_owner import UserOwner
@@ -44,18 +46,17 @@ async def get_current_active_owner(
     owner_id: int,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> User:
-    """Ensure the requested owner exists and the current user may manage it.
+) -> Owner:
+    """Load the requested owner and confirm the current user may manage it.
 
     Security policy: 404-only. If the owner does not exist, or if it exists
     but the user is not linked via user_owners, raise 404. This avoids
     leaking whether an owner id is valid to a user who should not see it
     (no 403 reconnaissance surface).
     """
-    from app.models.owner import Owner
-
     owner_result = await session.execute(select(Owner).where(Owner.id == owner_id))
-    if owner_result.scalar_one_or_none() is None:
+    owner = owner_result.scalar_one_or_none()
+    if owner is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Owner not found",
@@ -71,7 +72,7 @@ async def get_current_active_owner(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Owner not found",
         )
-    return current_user
+    return owner
 
 
 async def get_current_active_renter(
@@ -86,8 +87,6 @@ async def get_current_active_renter(
     raise 404. This avoids leaking whether a renter id is valid to a user
     who should not see it (no 403 reconnaissance surface).
     """
-    from app.models.owner_renter import OwnerRenter
-
     renter_result = await session.execute(select(Renter).where(Renter.id == renter_id))
     renter = renter_result.scalar_one_or_none()
     if renter is None:
