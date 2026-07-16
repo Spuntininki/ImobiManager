@@ -1,4 +1,4 @@
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -159,6 +159,24 @@ export function Contracts() {
     }
   }
 
+  async function handleDownloadPdf(contractId) {
+    try {
+      const resp = await api.get(`/contracts/${contractId}/pdf`, {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(new Blob([resp.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `contract-${contractId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Não foi possível baixar o contrato.");
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1800px] px-4 py-8 md:px-6">
       <h1 className="text-3xl font-bold tracking-tight">Contratos</h1>
@@ -297,6 +315,15 @@ export function Contracts() {
                               handleUpdate(contract.id, payload, onClose)
                             }
                           />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDownloadPdf(contract.id)}
+                          >
+                            <Download className="h-4 w-4" />
+                            <span className="sr-only">Baixar contrato</span>
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
