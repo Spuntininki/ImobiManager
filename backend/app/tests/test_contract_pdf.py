@@ -1,7 +1,8 @@
 """Integration tests for the contract PDF streaming endpoint.
 
 Covers auth, 404 for missing/unmanaged contracts, 422 for missing
-documents, and the happy path that returns a valid PDF.
+documents, the happy path that returns a valid PDF, and ASCII deburring
+of accented renter names in the download filename.
 """
 
 from httpx import AsyncClient
@@ -123,14 +124,14 @@ async def _create_contract_via_api(
 
 
 async def _full_setup(
-    client: AsyncClient, headers: dict[str, str]
+    client: AsyncClient, headers: dict[str, str], renter_name: str = "Maria"
 ) -> tuple[int, int, int, int]:
     """Create owner + renter + address + documents + contract.
 
     Returns ``(owner_id, renter_id, address_id, contract_id)``.
     """
     owner_id = await _create_owner_via_api(client, headers)
-    renter_id = await _create_renter_via_api(client, headers, owner_id)
+    renter_id = await _create_renter_via_api(client, headers, owner_id, name=renter_name)
     address_id = await _create_address_via_api(client, headers, owner_id)
 
     # Both parties need CPF + RG for the PDF pipeline.
@@ -166,9 +167,7 @@ async def test_get_contract_pdf_requires_auth_with_template_param(
 # ---------------------------------------------------------------------------
 
 
-async def test_get_contract_pdf_not_found(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
+async def test_get_contract_pdf_not_found(client: AsyncClient, db_session: AsyncSession) -> None:
     await _create_user(db_session)
     headers = await _auth_headers(client)
     response = await client.get("/api/v1/contracts/9999/pdf", headers=headers)
@@ -194,9 +193,7 @@ async def test_get_contract_pdf_missing_owner_documents_422(
     await _create_renter_doc(client, headers, renter_id, "RG", _TEST_RG)
     contract_id = await _create_contract_via_api(client, headers, owner_id, renter_id, address_id)
 
-    response = await client.get(
-        f"/api/v1/contracts/{contract_id}/pdf", headers=headers
-    )
+    response = await client.get(f"/api/v1/contracts/{contract_id}/pdf", headers=headers)
     assert response.status_code == 422
 
 
@@ -216,9 +213,7 @@ async def test_get_contract_pdf_missing_renter_rg_422(
     # No renter RG
     contract_id = await _create_contract_via_api(client, headers, owner_id, renter_id, address_id)
 
-    response = await client.get(
-        f"/api/v1/contracts/{contract_id}/pdf", headers=headers
-    )
+    response = await client.get(f"/api/v1/contracts/{contract_id}/pdf", headers=headers)
     assert response.status_code == 422
 
 
@@ -251,9 +246,7 @@ async def test_get_contract_pdf_unmanaged_owner_404(
     )
     headers2 = {"Authorization": f"Bearer {resp2.json()['access_token']}"}
 
-    response = await client.get(
-        f"/api/v1/contracts/{contract_id}/pdf", headers=headers2
-    )
+    response = await client.get(f"/api/v1/contracts/{contract_id}/pdf", headers=headers2)
     assert response.status_code == 404
 
 
@@ -270,16 +263,35 @@ async def test_get_contract_pdf_success(
     headers = await _auth_headers(client)
     *_, contract_id = await _full_setup(client, headers)
 
-    response = await client.get(
-        f"/api/v1/contracts/{contract_id}/pdf", headers=headers
-    )
+    response = await client.get(f"/api/v1/contracts/{contract_id}/pdf", headers=headers)
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert response.headers["content-disposition"] == (
-        f'attachment; filename="contract-{contract_id}.pdf"'
+        f'attachment; filename="Contrato-Maria-{contract_id}.pdf"'
     )
     assert len(response.content) > 0
     # Verify it starts with the PDF magic number (%PDF).
+    assert response.content[:4] == b"%PDF"
+
+
+# ---------------------------------------------------------------------------
+# Success — PDF with accented renter name (deburred to ASCII in filename)
+# ---------------------------------------------------------------------------
+
+
+async def test_get_contract_pdf_accented_renter_name(
+    client: AsyncClient, db_session: AsyncSession, seeded_standard_template: object
+) -> None:
+    """Accented names are deburred: "João da Silva" → Contrato-Joao_Silva-<id>.pdf."""
+    await _create_user(db_session)
+    headers = await _auth_headers(client)
+    *_, contract_id = await _full_setup(client, headers, renter_name="João da Silva")
+
+    response = await client.get(f"/api/v1/contracts/{contract_id}/pdf", headers=headers)
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == (
+        f'attachment; filename="Contrato-Joao_Silva-{contract_id}.pdf"'
+    )
     assert response.content[:4] == b"%PDF"
 
 

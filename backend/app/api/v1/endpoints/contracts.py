@@ -1,9 +1,12 @@
 """HTTP endpoints for the Contract resource (owner-scoped, partial updates)."""
 
 import io
+import re
+import unicodedata
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,12 +16,41 @@ from app.api.v1.dependencies import (
 )
 from app.db.session import get_db
 from app.models.contract import Contract
+from app.models.renter import Renter
 from app.models.user import User
 from app.schemas.contract import ContractCreate, ContractRead, ContractUpdate
 from app.services import contract_pdf_service, contract_service
 from app.services.contract_service import ContractRelationError
 
 router = APIRouter(tags=["contracts"])
+
+
+# Characters disallowed in filenames across common filesystems.
+_ILLEGAL_FILENAME_CHARS = re.compile(r'[\x00-\x1f<>:"/\\|?*]')
+
+
+# Portuguese name connector particles — dropped so the filename keeps the
+# first two *names* (e.g. "João da Silva" → "Joao_Silva", not "Joao_da").
+_NAME_CONNECTORS = frozenset({"da", "de", "do", "das", "dos", "e"})
+
+
+def _sanitize_renter_name(name: str, fallback: str) -> str:
+    """Reduce a renter name to a filename-safe ASCII slug.
+
+    Take the first two name tokens (skipping connector particles like "da"),
+    deburr accents to their ASCII base, replace illegal filename chars with
+    ``_``, and return the result. Returns ``fallback`` if the name has no
+    usable tokens (defensive only — the DB enforces non-empty names).
+    """
+    tokens = [t for t in name.split() if t.lower() not in _NAME_CONNECTORS][:2]
+    if not tokens:
+        return fallback
+    base = " ".join(tokens)
+    # NFKD puts combining marks on their own code points; drop them to deburr.
+    deburred = unicodedata.normalize("NFKD", base)
+    ascii_str = deburred.encode("ascii", "ignore").decode("ascii")
+    sanitized = _ILLEGAL_FILENAME_CHARS.sub("_", ascii_str)
+    return sanitized.replace(" ", "_") or fallback
 
 
 # --- Nested under owners: create + list ---
@@ -80,10 +112,12 @@ async def get_contract_pdf(
     """Stream the rendered contract PDF back to the browser.
 
     Auth/permission scoping reuses ``get_current_active_contract`` — the
-    caller must be linked to the contract's owner. Returns the PDF inline
-    (``Content-Disposition: inline``) so the browser displays it rather
-    than triggering a download dialog. Switch to ``attachment; filename=...``
-    if a download UX is desired later.
+    caller must be linked to the contract's owner. The response uses
+    ``Content-Disposition: attachment; filename="Contrato-<renter>-<id>.pdf"``
+    so the browser triggers a download dialog with a friendly, unique name.
+    The renter portion comes from the first two name tokens, deburred to
+    ASCII (e.g. "João da Silva" → "Joao_Silva"); the contract id guarantees
+    uniqueness across same-name renters.
 
     A ``?template_code=`` query param overrides the default ``standard``
     template, allowing future commercial/rural variants once seeded.
@@ -108,12 +142,16 @@ async def get_contract_pdf(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(e),
         ) from None
+    # renter_id is non-nullable with an enforced FK, so None is impossible
+    # here. Fetch the name in a cheap scalar query rather than widening the
+    # contract_pdf_service return type.
+    renter_name = await session.scalar(select(Renter.name).where(Renter.id == contract.renter_id))
+    safe_name = _sanitize_renter_name(renter_name or "", fallback=f"contract-{contract.id}")
+    filename = f"Contrato-{safe_name}-{contract.id}.pdf"
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="contract-{contract.id}.pdf"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
