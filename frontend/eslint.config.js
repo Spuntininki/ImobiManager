@@ -54,9 +54,10 @@ export default [
       globals: { ...globals.browser, ...globals.vitest },
     },
   },
+  // TypeScript eslint integration is pending typescript-eslint compatibility
+  // with TypeScript 7. Once available, remove this ignores block and add the
+  // typescript-eslint flat config.
   {
-    // TypeScript support is added in a later phase; until then keep eslint
-    // off .ts/.tsx so the flat config stays clean.
     ignores: ["**/*.ts", "**/*.tsx"],
   },
 ];
