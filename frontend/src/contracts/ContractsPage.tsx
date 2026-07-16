@@ -10,6 +10,7 @@ import {
   useUpdateContract,
 } from "@/hooks/useContractMutations";
 import { downloadContractPdf } from "@/services/contractService";
+import { parseContractPdfError } from "@/lib/contractPdf";
 import { OwnerSelect } from "@/components/layout/OwnerSelect";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,8 +122,13 @@ export function ContractsPage() {
       link.remove();
       URL.revokeObjectURL(url);
       toast.success("Contrato baixado com sucesso.");
-    } catch {
-      toast.error("Não foi possível baixar o contrato.");
+    } catch (error) {
+      const friendly = await parseContractPdfError(error);
+      toast.error(
+        friendly
+          ? `Não foi possível baixar o contrato. ${friendly}`
+          : "Não foi possível baixar o contrato.",
+      );
     }
   }
 

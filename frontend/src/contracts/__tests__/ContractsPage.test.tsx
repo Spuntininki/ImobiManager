@@ -172,4 +172,79 @@ describe("ContractsPage", () => {
       );
     });
   });
+
+  it("shows friendly toast when PDF download fails with missing docs", async () => {
+    const { listOwners } = await import("@/services/ownerService");
+    const { listContractsByOwner, downloadContractPdf } = await import(
+      "@/services/contractService"
+    );
+    const { listRentersByOwner } = await import(
+      "@/services/renterService"
+    );
+    const { listAddressesByOwner } = await import(
+      "@/services/addressService"
+    );
+    vi.mocked(downloadContractPdf).mockRejectedValue({
+      response: {
+        status: 422,
+        data: new Blob(
+          [
+            JSON.stringify({
+              detail: "Missing required document(s): owner_cpf, renter_rg",
+            }),
+          ],
+          { type: "application/json" },
+        ),
+      },
+    });
+    vi.mocked(listOwners).mockResolvedValue([{ id: 1, name: "Dono" }]);
+    vi.mocked(listContractsByOwner).mockResolvedValue([
+      {
+        id: 1,
+        renter_id: 10,
+        address_id: 20,
+        start_date: "2025-01-01T00:00:00",
+        end_date: "2026-01-01T00:00:00",
+        monthly_revenue: "1500.00",
+        deposit_value: "3000.00",
+        deposit_months: 2,
+        payment_day: 5,
+        status: "ACTIVE",
+      },
+    ]);
+    vi.mocked(listRentersByOwner).mockResolvedValue([
+      {
+        id: 10,
+        name: "Maria Souza",
+        primary_contact: "11999999999",
+        secondary_contact: null,
+        email: null,
+      },
+    ]);
+    vi.mocked(listAddressesByOwner).mockResolvedValue([
+      {
+        id: 20,
+        street_name: "Rua das Flores",
+        number: "123",
+        complement: null,
+        neighborhood: "Centro",
+        city: "São Paulo",
+        state: "SP",
+        zip_code: "01000-000",
+        type: "HOUSE",
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithQueryClient(<ContractsPage />);
+    const downloadBtn = await screen.findByRole("button", {
+      name: /baixar contrato/i,
+    });
+    await user.click(downloadBtn);
+    const { toast } = await import("sonner");
+    await vi.waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível baixar o contrato. Faltam: CPF do proprietário, RG do inquilino.",
+      );
+    });
+  });
 });
