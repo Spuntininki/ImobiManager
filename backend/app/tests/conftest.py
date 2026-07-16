@@ -19,6 +19,7 @@ from app.main import app
 from app.models.address import Address  # noqa: F401 — registers table on metadata
 from app.models.base import Base  # noqa: F401 — used by _reset_test_schema
 from app.models.contract import Contract  # noqa: F401
+from app.models.contract_template import ContractTemplate  # noqa: F401
 from app.models.owner import Owner  # noqa: F401
 from app.models.owner_document import OwnerDocument  # noqa: F401
 from app.models.owner_renter import OwnerRenter  # noqa: F401
@@ -117,3 +118,32 @@ async def client(
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def seeded_standard_template(db_session: AsyncSession) -> ContractTemplate:
+    """Insert the 'standard' contract template row for tests that need it.
+
+    Uses the same payload the Alembic migration seeds in production, so the
+    test-time row is byte-identical to the migration seed. Rolls back with
+    the per-test savepoint, so each test starts with no template rows
+    unless it pulls in this fixture.
+    """
+    from app.services.contract_generation.default_template import (
+        STANDARD_TEMPLATE_CODE,
+        STANDARD_TEMPLATE_DESCRIPTION,
+        load_default_content,
+        load_default_style,
+    )
+
+    template = ContractTemplate(
+        code=STANDARD_TEMPLATE_CODE,
+        description=STANDARD_TEMPLATE_DESCRIPTION,
+        content=load_default_content(),
+        style=load_default_style(),
+        is_active=True,
+    )
+    db_session.add(template)
+    await db_session.commit()
+    await db_session.refresh(template)
+    return template
