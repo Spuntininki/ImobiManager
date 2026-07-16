@@ -34,9 +34,12 @@ export async function deleteContract(contractId: number): Promise<void> {
 
 export async function downloadContractPdf(
   contractId: number,
-): Promise<Blob> {
+): Promise<{ blob: Blob; disposition: string | undefined }> {
   const resp = await api.get(`/contracts/${contractId}/pdf`, {
     responseType: "blob",
   });
-  return resp.data;
+  return {
+    blob: resp.data,
+    disposition: resp.headers["content-disposition"],
+  };
 }

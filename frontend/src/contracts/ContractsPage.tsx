@@ -109,11 +109,13 @@ export function ContractsPage() {
 
   async function handleDownloadPdf(contractId: number) {
     try {
-      const data = await downloadContractPdf(contractId);
-      const url = URL.createObjectURL(new Blob([data]));
+      const { blob, disposition } = await downloadContractPdf(contractId);
+      const url = URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `contract-${contractId}.pdf`);
+      const match = disposition?.match(/filename="?([^";]+)"?/i);
+      const filename = match?.[1] ?? `contract-${contractId}.pdf`;
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
