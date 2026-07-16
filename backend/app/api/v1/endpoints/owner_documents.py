@@ -47,7 +47,7 @@ async def list_documents(
     _user: User = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> list[OwnerDocumentRead]:
-    docs = await owner_document_service.list_documents_for_owner(session, owner_id)
+    docs = await owner_document_service.list_documents(session, owner_id)
     return [OwnerDocumentRead.model_validate(d) for d in docs]
 
 
@@ -61,8 +61,8 @@ async def get_document(
     _user: User = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> OwnerDocumentRead:
-    doc = await owner_document_service.get_document(session, document_id)
-    if doc is None or doc.owner_id != owner_id:
+    doc = await owner_document_service.get_document(session, owner_id, document_id)
+    if doc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return OwnerDocumentRead.model_validate(doc)
 
@@ -78,11 +78,10 @@ async def update_document(
     _user: User = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> OwnerDocumentRead:
-    doc = await owner_document_service.get_document(session, document_id)
-    if doc is None or doc.owner_id != owner_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     try:
-        updated = await owner_document_service.update_document(session, document_id, payload)
+        updated = await owner_document_service.update_document(
+            session, owner_id, document_id, payload
+        )
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -103,9 +102,6 @@ async def delete_document(
     _user: User = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    doc = await owner_document_service.get_document(session, document_id)
-    if doc is None or doc.owner_id != owner_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    deleted = await owner_document_service.delete_document(session, document_id)
+    deleted = await owner_document_service.delete_document(session, owner_id, document_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
