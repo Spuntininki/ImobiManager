@@ -276,7 +276,7 @@ async def test_get_contract_pdf_success(
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert response.headers["content-disposition"] == (
-        f'inline; filename="contract-{contract_id}.pdf"'
+        f'attachment; filename="contract-{contract_id}.pdf"'
     )
     assert len(response.content) > 0
     # Verify it starts with the PDF magic number (%PDF).

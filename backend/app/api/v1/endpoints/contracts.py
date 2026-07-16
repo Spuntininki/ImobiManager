@@ -112,7 +112,7 @@ async def get_contract_pdf(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="contract-{contract.id}.pdf"'
+            "Content-Disposition": f'attachment; filename="contract-{contract.id}.pdf"'
         },
     )
 

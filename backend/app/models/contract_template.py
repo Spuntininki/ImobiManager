@@ -9,7 +9,7 @@ code; only the prose/tokens live here.
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, Text, func, text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -28,7 +28,7 @@ class ContractTemplate(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     code: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    content: Mapped[dict] = mapped_column(JSON, nullable=False)
     style: Mapped[dict] = mapped_column(JSONB, nullable=False)
     is_active: Mapped[bool] = mapped_column(
         Boolean, server_default=text("true"), nullable=False
