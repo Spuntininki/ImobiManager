@@ -1,6 +1,6 @@
 ---
 name: backend
-description: Use when working on the FastAPI backend — Python under `backend/app`, API endpoints, SQLAlchemy models, Pydantic schemas, Alembic migrations, or UV package management. Enforces backend conventions, folder structure, and the domain model from `backend/db/schema.dbml`.
+description: Use when working on the FastAPI backend — Python under `backend/app`, API endpoints, SQLAlchemy models, Pydantic schemas, Alembic migrations, or UV package management. Enforces backend conventions, folder structure, and the domain model from `backend/schema/schema.dbml`.
 ---
 
 # ImobiManager - Backend
@@ -25,7 +25,7 @@ FastAPI REST backend for ImobiManager. Exposes the API consumed by the React fro
 - **Code language**: English (file names, modules, functions, variables, routes, constants, API response/error messages, logs).
 - **Architecture**: layered — thin API endpoints → services (business logic) → models (ORM) + schemas (I/O validation).
 - **Async**: use `async`/`await` and async SQLAlchemy sessions throughout.
-- **Database**: `backend/db/schema.dbml` is the source of truth for the data model. Models must mirror it.
+- **Database**: `backend/schema/schema.dbml` is the source of truth for the data model. Models must mirror it.
 - **Migrations** (Alembic): forward-only. Write and maintain the `upgrade()` direction only — do not maintain or run `downgrade()`. New revisions should leave `downgrade()` as a no-op (`"""Downgrade schema."""` docstring with an empty body, or omit) rather than authoring rollback logic. Never run `alembic downgrade` against dev or test databases; to reset, drop and recreate the schema from `Base.metadata` instead.
 - **Dependencies**: before adding or pinning any package, check its latest version from PyPI in the command line (e.g. `curl -s https://pypi.org/pypi/<package>/json | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['version'])"`). Pin to the current major (e.g. `>=0.139,<0.140`) and let UV lock exact patches in `uv.lock`. Never guess versions.
 - **Commit messages**: concise. One imperative subject line (`feat: add owner CRUD`, `fix: reject negative rent`) in conventional-commits style; add a short body only when context is genuinely needed. Avoid multi-line summaries.
@@ -35,7 +35,7 @@ FastAPI REST backend for ImobiManager. Exposes the API consumed by the React fro
 
 ## Domain Model
 
-Authoritative schema: `backend/db/schema.dbml`. Table/concept mapping:
+Authoritative schema: `backend/schema/schema.dbml`. Table/concept mapping:
 
 - `users` — login account. One user can manage multiple owners.
 - `owners` — legal or business name of the property owner.
@@ -65,7 +65,7 @@ Enums:
   - `backend/app/services/` — business logic.
   - `backend/app/tests/` — test suite.
 - `backend/alembic/` — database migrations.
-- `backend/db/schema.dbml` — PostgreSQL schema in DBML (authoritative reference; not runtime code).
+- `backend/schema/schema.dbml` — PostgreSQL schema in DBML (authoritative reference; not runtime code).
 - `backend/pyproject.toml` — UV project config.
 - `backend/.env` — environment variables.
 

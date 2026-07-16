@@ -158,12 +158,12 @@ BACKEND_TARGET=prod FRONTEND_TARGET=prod docker compose up --build -d
 - `backend/app/api/v1/endpoints/` — route handlers (HTTP only).
 - `backend/app/core/` — configuration, security, logging.
 - `backend/app/db/` — SQLAlchemy engine and session management.
-- `backend/app/models/` — SQLAlchemy ORM models mirroring `db/schema.dbml`.
+- `backend/app/models/` — SQLAlchemy ORM models mirroring `schema/schema.dbml`.
 - `backend/app/schemas/` — Pydantic models (request/response validation).
 - `backend/app/services/` — business logic.
 - `backend/app/tests/` — test suite.
 - `backend/alembic/` — database migrations.
-- `backend/db/schema.dbml` — authoritative PostgreSQL schema (DBML reference, not runtime code).
+- `backend/schema/schema.dbml` — authoritative PostgreSQL schema (DBML reference, not runtime code).
 
 ### Frontend
 

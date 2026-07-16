@@ -17,7 +17,7 @@ services:
       - "5433:5432"
     volumes:
       - imobimanager-postgres-data:/var/lib/postgresql/data
-      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backend/schema/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -U imobi -d imobimanager"]
       interval: 5s
