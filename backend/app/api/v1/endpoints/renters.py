@@ -71,7 +71,6 @@ async def update_renter(
 
 
 @router.delete("/renters/{renter_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_renter(
     renter_id: int,
     _renter: Renter = Depends(get_current_active_renter),

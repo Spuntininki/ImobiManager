@@ -71,7 +71,6 @@ async def update_address(
 
 
 @router.delete("/addresses/{address_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_address(
     address_id: int,
     _address: Address = Depends(get_current_active_address),

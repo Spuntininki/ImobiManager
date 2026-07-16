@@ -105,15 +105,26 @@ Table contracts {
   address_id int [ref: > addresses.id, note: 'Leased property address.']
   start_date timestamp [note: 'Date when the rental period begins.']
   end_date timestamp [note: 'Date when the rental period ends.']
-  monthly_revenue decimal [note: 'Current monthly rent amount.']
-  deposit_value decimal [note: 'Total security deposit amount.']
+  monthly_revenue decimal(12, 2) [note: 'Current monthly rent amount.']
+  deposit_value decimal(12, 2) [note: 'Total security deposit amount.']
   deposit_months int [note: 'Number of monthly rents equivalent to the security deposit.']
   payment_day int [not null, note: 'Day of the month when rent is due.']
-  generation_date timestamp [note: 'When the contract document was generated.']
+  generation_date timestamp [note: 'Reference date stamped on the contract as its generation date (set at contract creation).']
   signed_date timestamp [note: 'When the contract was signed by the parties.']
   cancel_date timestamp [note: 'When the contract was cancelled or terminated.']
   status contract_status [not null, note: 'Lifecycle status of the contract.']
   contract_file_path varchar [note: 'Path to the contract pdf file in the storage bucket.']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table contract_templates {
+  id int [primary key]
+  code varchar [unique, note: 'Stable identifier of the contract layout (e.g. standard, commercial).']
+  description varchar [note: 'Human-readable summary of the template.']
+  content json [note: 'Template lines with <REPLACE>token</REPLACE> placeholders and per-token metadata.']
+  style json [note: 'Paragraph and table styling for the rendered PDF.']
+  is_active boolean [not null, note: 'Whether the template is available for PDF generation.']
   created_at timestamp
   updated_at timestamp
 }

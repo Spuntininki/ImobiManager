@@ -57,7 +57,6 @@ async def update_owner(
 
 
 @router.delete("/{owner_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_owner(
     owner_id: int,
     _user: User = Depends(get_current_active_owner),

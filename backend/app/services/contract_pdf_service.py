@@ -160,7 +160,6 @@ def _fill_tokens(template: dict, contract_data: dict) -> dict:
     Pure: no I/O, no side effects on the inputs (the template dict is copied
     before mutation so the caller's template row stays pristine).
     """
-    # Copy the template so we never mutate the row loaded from the DB.
     working = {
         "content": template["content"],
         "replace": {token: dict(entry) for token, entry in template["replace"].items()},

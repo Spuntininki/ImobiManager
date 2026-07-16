@@ -147,7 +147,6 @@ async def update_contract(
 
 
 @router.delete("/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_contract(
     contract_id: int,
     _contract: Contract = Depends(get_current_active_contract),

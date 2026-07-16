@@ -49,7 +49,6 @@ async def delete_address(session: AsyncSession, address_id: int) -> bool:
 
     Returns True if deleted, False if not found.
     """
-    # TODO(phase future): replace physical delete with soft delete.
     address = await get_address(session, address_id)
     if address is None:
         return False

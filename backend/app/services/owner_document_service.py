@@ -70,7 +70,6 @@ async def delete_document(session: AsyncSession, document_id: int) -> bool:
 
     Returns True if deleted, False if not found.
     """
-    # TODO(phase future): replace physical delete with soft delete.
     doc = await get_document(session, document_id)
     if doc is None:
         return False

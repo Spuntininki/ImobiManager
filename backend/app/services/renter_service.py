@@ -55,7 +55,6 @@ async def delete_renter(session: AsyncSession, renter_id: int) -> bool:
 
     Returns True if deleted, False if not found.
     """
-    # TODO(phase future): replace physical delete with soft delete.
     renter = await get_renter(session, renter_id)
     if renter is None:
         return False

@@ -29,7 +29,6 @@ async def delete_user(session: AsyncSession, email: str) -> bool:
 
     Returns True if deleted, False if no user with the given email exists.
     """
-    # TODO(phase future): replace physical delete with soft delete.
     result = await session.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is None:

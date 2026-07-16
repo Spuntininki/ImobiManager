@@ -2,7 +2,7 @@
 
 import calendar
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -36,7 +36,12 @@ def _generate_contract_payment_dates(
     if start_date > end_date:
         return []
 
-    first_candidate = date(start_date.year, start_date.month, payment_day)
+    # Clamp the requested payment day to the start month's last valid day,
+    # mirroring _add_months (a payment_day of 31 must not crash on Feb/Apr/etc.).
+    first_day = min(
+        payment_day, calendar.monthrange(start_date.year, start_date.month)[1]
+    )
+    first_candidate = date(start_date.year, start_date.month, first_day)
     if first_candidate < start_date:
         first_candidate = _add_months(first_candidate, 1)
 
@@ -52,8 +57,9 @@ def _generate_contract_payment_dates(
 def _default_date_range() -> tuple[date, date]:
     """Return the default 12-month dashboard window starting from today."""
     today = date.today()
-    # Approximate 12 months by subtracting one day from the same day next year.
-    end = (today.replace(year=today.year + 1)) - timedelta(days=1)
+    # 12 months ahead, clamping the day to the target month's last valid day
+    # (handles Feb 29 in leap -> non-leap transition). Today is the inclusive start.
+    end = _add_months(today, 12)
     return today, end
 
 

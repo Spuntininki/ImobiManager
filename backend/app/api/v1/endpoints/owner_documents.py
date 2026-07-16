@@ -97,7 +97,6 @@ async def update_document(
     "/owners/{owner_id}/documents/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_document(
     owner_id: int,
     document_id: int,

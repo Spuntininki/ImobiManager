@@ -106,9 +106,13 @@ async def update_contract(
         await _validate_renter_belongs_to_owner(session, contract.owner_id, data["renter_id"])
     if "address_id" in data and data["address_id"] is not None:
         await _validate_address_belongs_to_owner(session, contract.owner_id, data["address_id"])
+    # Only signed_date and cancel_date are nullable in schema.dbml; an explicit
+    # null on those two clears the value. Skip nulls on the remaining (NOT NULL)
+    # fields so an accidental null in the payload can't violate the schema.
     for field, value in data.items():
-        if value is not None:
-            setattr(contract, field, value)
+        if value is None and field not in {"signed_date", "cancel_date"}:
+            continue
+        setattr(contract, field, value)
     await session.commit()
     await session.refresh(contract)
     return contract
@@ -119,7 +123,6 @@ async def delete_contract(session: AsyncSession, contract_id: int) -> bool:
 
     Returns True if deleted, False if not found.
     """
-    # TODO(phase future): replace physical delete with soft delete.
     contract = await get_contract(session, contract_id)
     if contract is None:
         return False

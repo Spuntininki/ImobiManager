@@ -101,7 +101,6 @@ async def update_document(
     "/renters/{renter_id}/documents/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_document(
     document_id: int,
     renter: Renter = Depends(get_current_active_renter),
