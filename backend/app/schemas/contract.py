@@ -36,7 +36,7 @@ class ContractCreate(BaseModel):
     payment_day: int = Field(..., ge=1, le=31)
 
     @model_validator(mode="after")
-    def _validate_dates(self) -> "ContractCreate":
+    def _validate_dates(self) -> ContractCreate:
         _check_dates_ordered(self.start_date, self.end_date)
         return self
 
@@ -65,7 +65,7 @@ class ContractUpdate(BaseModel):
     cancel_date: datetime | None = None
 
     @model_validator(mode="after")
-    def _validate_dates(self) -> "ContractUpdate":
+    def _validate_dates(self) -> ContractUpdate:
         _check_dates_ordered(self.start_date, self.end_date)
         return self
 
