@@ -11,8 +11,11 @@ import {
 } from "recharts";
 
 import { useAuth } from "@/contexts/AuthContext";
-import api from "@/lib/api";
-import { useOwners } from "@/lib/useOwners";
+import { useOwners } from "@/hooks/useOwners";
+import {
+  useRevenueSummary,
+  useRevenueTimeline,
+} from "@/hooks/useRevenue";
 import {
   Card,
   CardContent,
@@ -80,10 +83,18 @@ export function Dashboard() {
   const [startDate, setStartDate] = useState(defaultRange.start);
   const [endDate, setEndDate] = useState(defaultRange.end);
 
-  const [timeline, setTimeline] = useState([]);
-  const [summary, setSummary] = useState({ total_amount: "0.00", total_payments: 0 });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { timeline, isLoading: timelineLoading, error: timelineError } =
+    useRevenueTimeline(selectedOwnerId ?? undefined, {
+      start_date: startDate,
+      end_date: endDate,
+    });
+  const { summary, isLoading: summaryLoading, error: summaryError } =
+    useRevenueSummary(selectedOwnerId ?? undefined, {
+      start_date: startDate,
+      end_date: endDate,
+    });
+  const isLoading = timelineLoading || summaryLoading;
+  const error = timelineError || summaryError;
   const [viewMode, setViewMode] = useState("month");
 
   useEffect(() => {
@@ -91,36 +102,6 @@ export function Dashboard() {
       setSelectedOwnerId(String(owners[0].id));
     }
   }, [owners, selectedOwnerId]);
-
-  useEffect(() => {
-    if (selectedOwnerId === null) return;
-    let cancelled = false;
-    setIsLoading(true);
-    setError("");
-    Promise.all([
-      api.get(`/owners/${selectedOwnerId}/revenue-timeline`, {
-        params: { start_date: startDate, end_date: endDate },
-      }),
-      api.get(`/owners/${selectedOwnerId}/revenue-timeline/summary`, {
-        params: { start_date: startDate, end_date: endDate },
-      }),
-    ])
-      .then(([timelineResp, summaryResp]) => {
-        if (!cancelled) {
-          setTimeline(timelineResp.data);
-          setSummary(summaryResp.data);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar a projeção de receitas.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedOwnerId, startDate, endDate]);
 
   const chartData = useMemo(() => {
     if (viewMode === "date") {

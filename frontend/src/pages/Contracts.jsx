@@ -2,8 +2,14 @@ import { Download, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import api from "@/lib/api";
-import { useOwners } from "@/lib/useOwners";
+import { useOwners } from "@/hooks/useOwners";
+import { useContractsPageData } from "@/hooks/useContractsPageData";
+import {
+  useCreateContract,
+  useDeleteContract,
+  useUpdateContract,
+} from "@/hooks/useContractMutations";
+import { downloadContractPdf } from "@/services/contractService";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -68,11 +74,19 @@ export function Contracts() {
   const { owners, isLoading: ownersLoading, error: ownersError } = useOwners();
   const [selectedOwnerId, setSelectedOwnerId] = useState(null);
 
-  const [contracts, setContracts] = useState([]);
-  const [renters, setRenters] = useState([]);
-  const [addresses, setAddresses] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    contracts,
+    renters,
+    addresses,
+    isLoading,
+    error: pageDataError,
+  } = useContractsPageData(selectedOwnerId ?? undefined);
   const [error, setError] = useState("");
+
+  const createContract = useCreateContract();
+  const updateContract = useUpdateContract();
+  const deleteContract = useDeleteContract();
+  const pageError = error || pageDataError;
 
   const renterMap = useMemo(
     () => Object.fromEntries(renters.map((r) => [r.id, r])),
@@ -89,44 +103,9 @@ export function Contracts() {
     }
   }, [owners, selectedOwnerId]);
 
-  // Fetch contracts, renters and addresses for the selected owner in parallel.
-  // Renters/addresses are needed both for the create form and to render
-  // contract cards with names instead of raw IDs.
-  useEffect(() => {
-    if (selectedOwnerId === null) return;
-    let cancelled = false;
-    setIsLoading(true);
-    setError("");
-    Promise.all([
-      api.get(`/owners/${selectedOwnerId}/contracts`),
-      api.get(`/owners/${selectedOwnerId}/renters`),
-      api.get(`/owners/${selectedOwnerId}/addresses`),
-    ])
-      .then(([contractsResp, rentersResp, addressesResp]) => {
-        if (!cancelled) {
-          setContracts(contractsResp.data);
-          setRenters(rentersResp.data);
-          setAddresses(addressesResp.data);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar os contratos.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedOwnerId]);
-
   async function handleCreate(payload, onClose) {
     try {
-      const resp = await api.post(
-        `/owners/${selectedOwnerId}/contracts`,
-        payload
-      );
-      setContracts((prev) => [...prev, resp.data]);
+      await createContract.mutateAsync({ ownerId: selectedOwnerId, payload });
       onClose();
     } catch {
       setError("Não foi possível criar o contrato.");
@@ -135,12 +114,11 @@ export function Contracts() {
 
   async function handleUpdate(contractId, payload, onClose) {
     try {
-      const resp = await api.patch(`/contracts/${contractId}`, payload);
-      setContracts((prev) =>
-        prev.map((contract) =>
-          contract.id === contractId ? resp.data : contract
-        )
-      );
+      await updateContract.mutateAsync({
+        contractId,
+        payload,
+        ownerId: selectedOwnerId,
+      });
       onClose();
     } catch {
       setError("Não foi possível atualizar o contrato.");
@@ -152,8 +130,7 @@ export function Contracts() {
       return;
     }
     try {
-      await api.delete(`/contracts/${contractId}`);
-      setContracts((prev) => prev.filter((c) => c.id !== contractId));
+      await deleteContract.mutateAsync({ contractId, ownerId: selectedOwnerId });
     } catch {
       setError("Não foi possível excluir o contrato.");
     }
@@ -161,10 +138,8 @@ export function Contracts() {
 
   async function handleDownloadPdf(contractId) {
     try {
-      const resp = await api.get(`/contracts/${contractId}/pdf`, {
-        responseType: "blob",
-      });
-      const url = URL.createObjectURL(new Blob([resp.data]));
+      const data = await downloadContractPdf(contractId);
+      const url = URL.createObjectURL(new Blob([data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `contract-${contractId}.pdf`);
@@ -235,8 +210,8 @@ export function Contracts() {
         </div>
       )}
 
-      {error && (
-        <p className="mt-4 text-sm font-medium text-destructive">{error}</p>
+      {pageError && (
+        <p className="mt-4 text-sm font-medium text-destructive">{pageError}</p>
       )}
 
       {selectedOwnerId !== null && owners.length > 0 && (

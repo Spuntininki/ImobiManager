@@ -2,8 +2,15 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import api from "@/lib/api";
-import { useOwners } from "@/lib/useOwners";
+import { useOwners } from "@/hooks/useOwners";
+import {
+  useAddresses,
+} from "@/hooks/useAddresses";
+import {
+  useCreateAddress,
+  useDeleteAddress,
+  useUpdateAddress,
+} from "@/hooks/useAddressMutations";
 import {
   validateState,
   validateZipCode,
@@ -57,9 +64,17 @@ const EMPTY_FORM = {
 export function Properties() {
   const { owners, isLoading: ownersLoading, error: ownersError } = useOwners();
   const [selectedOwnerId, setSelectedOwnerId] = useState(null);
-  const [addresses, setAddresses] = useState([]);
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const {
+    addresses,
+    isLoading: isLoadingAddresses,
+    error: addressesError,
+  } = useAddresses(selectedOwnerId ?? undefined);
   const [error, setError] = useState("");
+
+  const createAddress = useCreateAddress();
+  const updateAddress = useUpdateAddress();
+  const deleteAddress = useDeleteAddress();
+  const pageError = error || addressesError;
 
   // Default to the first owner once the list arrives.
   useEffect(() => {
@@ -68,35 +83,9 @@ export function Properties() {
     }
   }, [owners, selectedOwnerId]);
 
-  // Fetch addresses whenever the selected owner changes.
-  useEffect(() => {
-    if (selectedOwnerId === null) return;
-    let cancelled = false;
-    setIsLoadingAddresses(true);
-    setError("");
-    api
-      .get(`/owners/${selectedOwnerId}/addresses`)
-      .then((resp) => {
-        if (!cancelled) setAddresses(resp.data);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar os imóveis.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingAddresses(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedOwnerId]);
-
   async function handleCreate(payload, onClose) {
     try {
-      const resp = await api.post(
-        `/owners/${selectedOwnerId}/addresses`,
-        payload
-      );
-      setAddresses((prev) => [...prev, resp.data]);
+      await createAddress.mutateAsync({ ownerId: selectedOwnerId, payload });
       onClose();
     } catch {
       setError("Não foi possível criar o imóvel.");
@@ -105,10 +94,11 @@ export function Properties() {
 
   async function handleUpdate(addressId, payload, onClose) {
     try {
-      const resp = await api.put(`/addresses/${addressId}`, payload);
-      setAddresses((prev) =>
-        prev.map((address) => (address.id === addressId ? resp.data : address))
-      );
+      await updateAddress.mutateAsync({
+        addressId,
+        payload,
+        ownerId: selectedOwnerId,
+      });
       onClose();
     } catch {
       setError("Não foi possível atualizar o imóvel.");
@@ -120,8 +110,10 @@ export function Properties() {
       return;
     }
     try {
-      await api.delete(`/addresses/${addressId}`);
-      setAddresses((prev) => prev.filter((a) => a.id !== addressId));
+      await deleteAddress.mutateAsync({
+        addressId,
+        ownerId: selectedOwnerId,
+      });
     } catch {
       setError("Não foi possível excluir o imóvel.");
     }
@@ -181,8 +173,8 @@ export function Properties() {
         </div>
       )}
 
-      {error && (
-        <p className="mt-4 text-sm font-medium text-destructive">{error}</p>
+      {pageError && (
+        <p className="mt-4 text-sm font-medium text-destructive">{pageError}</p>
       )}
 
       {selectedOwnerId !== null && owners.length > 0 && (

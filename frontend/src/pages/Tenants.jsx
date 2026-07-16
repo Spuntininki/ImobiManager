@@ -12,12 +12,23 @@ import {
   parseEmail,
   parsePhone,
   PHONE_MAX_DIGITS,
+} from "@/lib/formatters";
+import {
   validateDocument,
   validateEmail,
   validateName,
   validatePhone,
-} from "@/lib/formatters";
-import { useOwners } from "@/lib/useOwners";
+} from "@/lib/validators";
+import { useOwners } from "@/hooks/useOwners";
+import { useRenters } from "@/hooks/useRenters";
+import {
+  useCreateRenter,
+  useDeleteRenter,
+  useUpdateRenter,
+} from "@/hooks/useRenterMutations";
+import { createRenterDocument, deleteRenterDocument } from "@/services/renterService";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/queryKeys";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -69,9 +80,18 @@ const EMPTY_DOCUMENT = {
 export function Tenants() {
   const { owners, isLoading: ownersLoading, error: ownersError } = useOwners();
   const [selectedOwnerId, setSelectedOwnerId] = useState(null);
-  const [renters, setRenters] = useState([]);
-  const [isLoadingRenters, setIsLoadingRenters] = useState(false);
+  const {
+    renters,
+    isLoading: isLoadingRenters,
+    error: rentersError,
+  } = useRenters(selectedOwnerId ?? undefined);
   const [error, setError] = useState("");
+
+  const createRenter = useCreateRenter();
+  const updateRenter = useUpdateRenter();
+  const deleteRenter = useDeleteRenter();
+  const queryClient = useQueryClient();
+  const pageError = error || rentersError;
 
   useEffect(() => {
     if (selectedOwnerId === null && owners.length > 0) {
@@ -79,42 +99,22 @@ export function Tenants() {
     }
   }, [owners, selectedOwnerId]);
 
-  useEffect(() => {
-    if (selectedOwnerId === null) return;
-    let cancelled = false;
-    setIsLoadingRenters(true);
-    setError("");
-    api
-      .get(`/owners/${selectedOwnerId}/renters`)
-      .then((resp) => {
-        if (!cancelled) setRenters(resp.data);
-      })
-      .catch(() => {
-        if (!cancelled) setError("Não foi possível carregar os inquilinos.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingRenters(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedOwnerId]);
-
   async function handleCreate(payload, documents, _initialDocuments, onClose) {
     try {
-      const resp = await api.post(
-        `/owners/${selectedOwnerId}/renters`,
-        payload
-      );
-      const renterId = resp.data.id;
+      const renter = await createRenter.mutateAsync({
+        ownerId: selectedOwnerId,
+        payload,
+      });
       for (const doc of documents) {
         if (doc.isDeleted) continue;
-        await api.post(`/renters/${renterId}/documents`, {
+        await createRenterDocument(renter.id, {
           document_type: doc.document_type,
-          document: doc.document.trim(),
+          document: doc.document,
         });
       }
-      setRenters((prev) => [...prev, resp.data]);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.renterDocuments(renter.id),
+      });
       onClose();
     } catch {
       throw new Error("Não foi possível criar o inquilino.");
@@ -123,23 +123,27 @@ export function Tenants() {
 
   async function handleUpdate(renterId, payload, documents, initialDocuments, onClose) {
     try {
-      const resp = await api.put(`/renters/${renterId}`, payload);
+      await updateRenter.mutateAsync({
+        renterId,
+        payload,
+        ownerId: selectedOwnerId,
+      });
 
       for (const doc of documents) {
         const isExisting = typeof doc.id === "number";
         if (doc.isDeleted && isExisting) {
-          await api.delete(`/renters/${renterId}/documents/${doc.id}`);
+          await deleteRenterDocument(renterId, doc.id);
         } else if (!isExisting && !doc.isDeleted) {
-          await api.post(`/renters/${renterId}/documents`, {
+          await createRenterDocument(renterId, {
             document_type: doc.document_type,
-            document: doc.document.trim(),
+            document: doc.document,
           });
         }
       }
 
-      setRenters((prev) =>
-        prev.map((renter) => (renter.id === renterId ? resp.data : renter))
-      );
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.renterDocuments(renterId),
+      });
       onClose();
     } catch (err) {
       if (err.response?.status === 409) {
@@ -154,8 +158,7 @@ export function Tenants() {
       return;
     }
     try {
-      await api.delete(`/renters/${renterId}`);
-      setRenters((prev) => prev.filter((r) => r.id !== renterId));
+      await deleteRenter.mutateAsync({ renterId, ownerId: selectedOwnerId });
     } catch {
       setError("Não foi possível excluir o inquilino.");
     }
@@ -215,8 +218,8 @@ export function Tenants() {
         </div>
       )}
 
-      {error && (
-        <p className="mt-4 text-sm font-medium text-destructive">{error}</p>
+      {pageError && (
+        <p className="mt-4 text-sm font-medium text-destructive">{pageError}</p>
       )}
 
       {selectedOwnerId !== null && owners.length > 0 && (

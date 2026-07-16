@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-import api from "@/lib/api";
+import { getMe, login as loginRequest } from "@/services/authService";
 import { clearToken, getToken, setToken } from "@/lib/auth";
 
 const AuthContext = createContext(null);
@@ -24,11 +24,10 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    api
-      .get("/auth/me")
-      .then((resp) => {
-        setUserName(resp.data.user_name);
-        setEmail(resp.data.email);
+    getMe()
+      .then((me) => {
+        setUserName(me.user_name);
+        setEmail(me.email);
         setIsAuthenticated(true);
       })
       .catch(() => {
@@ -41,15 +40,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const resp = await api.post("/auth/login", { email, password });
-    setToken(resp.data.access_token);
+    const data = await loginRequest(email, password);
+    setToken(data.access_token);
     // Fetch the profile from /auth/me so login and page refresh share one
     // single source of truth for the user's name/email.
-    const me = await api.get("/auth/me");
-    setUserName(me.data.user_name);
-    setEmail(me.data.email);
+    const me = await getMe();
+    setUserName(me.user_name);
+    setEmail(me.email);
     setIsAuthenticated(true);
-    return resp.data;
+    return data;
   };
 
   const logout = () => {

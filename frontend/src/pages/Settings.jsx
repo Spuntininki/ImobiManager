@@ -1,15 +1,27 @@
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import api from "@/lib/api";
 import {
   formatDocument,
   getDocumentMaxLength,
   limitRawLength,
   parseDocument,
-  validateDocument,
-  validateName,
 } from "@/lib/formatters";
+import { validateDocument, validateName } from "@/lib/validators";
+import { useOwners } from "@/hooks/useOwners";
+import {
+  useCreateOwner,
+  useDeleteOwner,
+  useUpdateOwner,
+} from "@/hooks/useOwnerMutations";
+import {
+  createOwnerDocument,
+  deleteOwnerDocument,
+} from "@/services/ownerService";
+import { queryKeys } from "@/hooks/queryKeys";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -52,41 +64,28 @@ const EMPTY_DOCUMENT = {
 };
 
 export function Settings() {
-  const [owners, setOwners] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { owners, isLoading, error: ownersError } = useOwners();
   const [error, setError] = useState("");
 
-  async function fetchOwners() {
-    setIsLoading(true);
-    setError("");
-    try {
-      const resp = await api.get("/owners");
-      setOwners(resp.data);
-    } catch {
-      setError("Não foi possível carregar os proprietários.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchOwners();
-  }, []);
+  const createOwner = useCreateOwner();
+  const updateOwner = useUpdateOwner();
+  const deleteOwner = useDeleteOwner();
+  const queryClient = useQueryClient();
+  const pageError = error || ownersError;
 
   async function handleCreate(name, documents, _initialDocuments, onClose) {
     try {
-      const resp = await api.post("/owners", { name });
-      const ownerId = resp.data.id;
-      const createdDocs = [];
+      const owner = await createOwner.mutateAsync({ name });
       for (const doc of documents) {
         if (doc.isDeleted) continue;
-        const docResp = await api.post(`/owners/${ownerId}/documents`, {
+        await createOwnerDocument(owner.id, {
           document_type: doc.document_type,
-          document: doc.document.trim(),
+          document: doc.document,
         });
-        createdDocs.push(docResp.data);
       }
-      setOwners((prev) => [...prev, { ...resp.data, documents: createdDocs }]);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.ownerDocuments(owner.id),
+      });
       onClose();
     } catch {
       throw new Error("Não foi possível criar o proprietário.");
@@ -95,23 +94,23 @@ export function Settings() {
 
   async function handleUpdate(ownerId, name, documents, initialDocuments, onClose) {
     try {
-      const resp = await api.put(`/owners/${ownerId}`, { name });
+      await updateOwner.mutateAsync({ ownerId, name });
 
       for (const doc of documents) {
         const isExisting = typeof doc.id === "number";
         if (doc.isDeleted && isExisting) {
-          await api.delete(`/owners/${ownerId}/documents/${doc.id}`);
+          await deleteOwnerDocument(ownerId, doc.id);
         } else if (!isExisting && !doc.isDeleted) {
-          await api.post(`/owners/${ownerId}/documents`, {
+          await createOwnerDocument(ownerId, {
             document_type: doc.document_type,
-            document: doc.document.trim(),
+            document: doc.document,
           });
         }
       }
 
-      setOwners((prev) =>
-        prev.map((owner) => (owner.id === ownerId ? resp.data : owner))
-      );
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.ownerDocuments(ownerId),
+      });
       onClose();
     } catch (err) {
       if (err.response?.status === 409) {
@@ -126,8 +125,7 @@ export function Settings() {
       return;
     }
     try {
-      await api.delete(`/owners/${ownerId}`);
-      setOwners((prev) => prev.filter((o) => o.id !== ownerId));
+      await deleteOwner.mutateAsync({ ownerId });
     } catch {
       setError("Não foi possível excluir o proprietário.");
     }
@@ -145,8 +143,8 @@ export function Settings() {
         <OwnerDialog onSubmit={handleCreate} />
       </div>
 
-      {error && (
-        <p className="mt-4 text-sm font-medium text-destructive">{error}</p>
+      {pageError && (
+        <p className="mt-4 text-sm font-medium text-destructive">{pageError}</p>
       )}
 
       <div className="mt-4 overflow-x-auto rounded-md border">
