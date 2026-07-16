@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -11,7 +11,7 @@ import {
 } from "recharts";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useOwners } from "@/hooks/useOwners";
+import { useOwnerSelect } from "@/hooks/useOwnerSelect";
 import {
   useRevenueSummary,
   useRevenueTimeline,
@@ -74,10 +74,15 @@ function getDefaultDateRange() {
   return { start, end };
 }
 
-export function Dashboard() {
+export function DashboardPage() {
   const { email, userName } = useAuth();
-  const { owners, isLoading: ownersLoading, error: ownersError } = useOwners();
-  const [selectedOwnerId, setSelectedOwnerId] = useState(null);
+  const {
+    owners,
+    isLoading: ownersLoading,
+    error: ownersError,
+    selectedOwnerId,
+    setSelectedOwnerId,
+  } = useOwnerSelect();
 
   const defaultRange = useMemo(() => getDefaultDateRange(), []);
   const [startDate, setStartDate] = useState(defaultRange.start);
@@ -96,12 +101,6 @@ export function Dashboard() {
   const isLoading = timelineLoading || summaryLoading;
   const error = timelineError || summaryError;
   const [viewMode, setViewMode] = useState("month");
-
-  useEffect(() => {
-    if (selectedOwnerId === null && owners.length > 0) {
-      setSelectedOwnerId(String(owners[0].id));
-    }
-  }, [owners, selectedOwnerId]);
 
   const chartData = useMemo(() => {
     if (viewMode === "date") {

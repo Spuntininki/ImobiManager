@@ -2,12 +2,12 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { Navbar } from "@/components/layout/Navbar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Contracts } from "@/pages/Contracts";
-import { Dashboard } from "@/pages/Dashboard";
+import { ContractsPage } from "@/contracts/ContractsPage";
+import { DashboardPage } from "@/dashboard/DashboardPage";
 import { Login } from "@/pages/Login";
-import { Properties } from "@/pages/Properties";
-import { Settings } from "@/pages/Settings";
-import { Tenants } from "@/pages/Tenants";
+import { PropertiesPage } from "@/properties/PropertiesPage";
+import { SettingsPage } from "@/settings/SettingsPage";
+import { TenantsPage } from "@/tenants/TenantsPage";
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -25,11 +25,11 @@ function AppRoutes() {
       <Navbar />
       <main className="flex-1">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/properties" element={<Properties />} />
-          <Route path="/tenants" element={<Tenants />} />
-          <Route path="/contracts" element={<Contracts />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/properties" element={<PropertiesPage />} />
+          <Route path="/tenants" element={<TenantsPage />} />
+          <Route path="/contracts" element={<ContractsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
     </div>
