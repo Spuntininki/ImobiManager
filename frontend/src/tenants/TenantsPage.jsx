@@ -1,6 +1,6 @@
 import { Loader2, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { formatPhone } from "@/lib/formatters";
 import { useOwnerSelect } from "@/hooks/useOwnerSelect";
@@ -37,13 +37,11 @@ export function TenantsPage() {
     isLoading: isLoadingRenters,
     error: rentersError,
   } = useRenters(selectedOwnerId ?? undefined);
-  const [error, setError] = useState("");
-
   const createRenter = useCreateRenter();
   const updateRenter = useUpdateRenter();
   const deleteRenter = useDeleteRenter();
   const queryClient = useQueryClient();
-  const pageError = error || rentersError;
+  const pageError = rentersError;
 
   async function handleCreate(payload, documents, _initialDocuments, onClose) {
     try {
@@ -100,13 +98,11 @@ export function TenantsPage() {
   }
 
   async function handleDelete(renterId) {
-    if (!confirm("Excluir este inquilino? Esta ação não pode ser desfeita.")) {
-      return;
-    }
     try {
       await deleteRenter.mutateAsync({ renterId, ownerId: selectedOwnerId });
+      toast.success("Inquilino excluído com sucesso.");
     } catch {
-      setError("Não foi possível excluir o inquilino.");
+      toast.error("Não foi possível excluir o inquilino.");
     }
   }
 

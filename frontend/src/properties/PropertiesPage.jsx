@@ -1,5 +1,5 @@
 import { Loader2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 
 import { useOwnerSelect } from "@/hooks/useOwnerSelect";
 import { useAddresses } from "@/hooks/useAddresses";
@@ -39,19 +39,18 @@ export function PropertiesPage() {
     isLoading: isLoadingAddresses,
     error: addressesError,
   } = useAddresses(selectedOwnerId ?? undefined);
-  const [error, setError] = useState("");
-
   const createAddress = useCreateAddress();
   const updateAddress = useUpdateAddress();
   const deleteAddress = useDeleteAddress();
-  const pageError = error || addressesError;
+  const pageError = addressesError;
 
   async function handleCreate(payload, onClose) {
     try {
       await createAddress.mutateAsync({ ownerId: selectedOwnerId, payload });
+      toast.success("Imóvel criado com sucesso.");
       onClose();
     } catch {
-      setError("Não foi possível criar o imóvel.");
+      toast.error("Não foi possível criar o imóvel.");
     }
   }
 
@@ -62,23 +61,22 @@ export function PropertiesPage() {
         payload,
         ownerId: selectedOwnerId,
       });
+      toast.success("Imóvel atualizado com sucesso.");
       onClose();
     } catch {
-      setError("Não foi possível atualizar o imóvel.");
+      toast.error("Não foi possível atualizar o imóvel.");
     }
   }
 
   async function handleDelete(addressId) {
-    if (!confirm("Excluir este imóvel? Esta ação não pode ser desfeita.")) {
-      return;
-    }
     try {
       await deleteAddress.mutateAsync({
         addressId,
         ownerId: selectedOwnerId,
       });
+      toast.success("Imóvel excluído com sucesso.");
     } catch {
-      setError("Não foi possível excluir o imóvel.");
+      toast.error("Não foi possível excluir o imóvel.");
     }
   }
 

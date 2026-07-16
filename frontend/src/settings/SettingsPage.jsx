@@ -1,6 +1,6 @@
 import { Loader2, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { useOwners } from "@/hooks/useOwners";
 import {
@@ -26,13 +26,11 @@ import { OwnerDialog } from "@/settings/components/OwnerDialog";
 
 export function SettingsPage() {
   const { owners, isLoading, error: ownersError } = useOwners();
-  const [error, setError] = useState("");
-
   const createOwner = useCreateOwner();
   const updateOwner = useUpdateOwner();
   const deleteOwnerM = useDeleteOwner();
   const queryClient = useQueryClient();
-  const pageError = error || ownersError;
+  const pageError = ownersError;
 
   async function handleCreate(name, documents, _initialDocuments, onClose) {
     try {
@@ -82,13 +80,11 @@ export function SettingsPage() {
   }
 
   async function handleDelete(ownerId) {
-    if (!confirm("Excluir este proprietário? Esta ação não pode ser desfeita.")) {
-      return;
-    }
     try {
       await deleteOwnerM.mutateAsync({ ownerId });
+      toast.success("Proprietário excluído com sucesso.");
     } catch {
-      setError("Não foi possível excluir o proprietário.");
+      toast.error("Não foi possível excluir o proprietário.");
     }
   }
 

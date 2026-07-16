@@ -1,5 +1,6 @@
 import { Download, Loader2, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { toast } from "sonner";
 
 import { useOwnerSelect } from "@/hooks/useOwnerSelect";
 import { useContractsPageData } from "@/hooks/useContractsPageData";
@@ -58,12 +59,10 @@ export function ContractsPage() {
     isLoading,
     error: pageDataError,
   } = useContractsPageData(selectedOwnerId ?? undefined);
-  const [error, setError] = useState("");
-
   const createContract = useCreateContract();
   const updateContract = useUpdateContract();
   const deleteContract = useDeleteContract();
-  const pageError = error || pageDataError;
+  const pageError = pageDataError;
 
   const renterMap = useMemo(
     () => Object.fromEntries(renters.map((r) => [r.id, r])),
@@ -77,9 +76,10 @@ export function ContractsPage() {
   async function handleCreate(payload, onClose) {
     try {
       await createContract.mutateAsync({ ownerId: selectedOwnerId, payload });
+      toast.success("Contrato criado com sucesso.");
       onClose();
     } catch {
-      setError("Não foi possível criar o contrato.");
+      toast.error("Não foi possível criar o contrato.");
     }
   }
 
@@ -90,20 +90,19 @@ export function ContractsPage() {
         payload,
         ownerId: selectedOwnerId,
       });
+      toast.success("Contrato atualizado com sucesso.");
       onClose();
     } catch {
-      setError("Não foi possível atualizar o contrato.");
+      toast.error("Não foi possível atualizar o contrato.");
     }
   }
 
   async function handleDelete(contractId) {
-    if (!confirm("Excluir este contrato? Esta ação não pode ser desfeita.")) {
-      return;
-    }
     try {
       await deleteContract.mutateAsync({ contractId, ownerId: selectedOwnerId });
+      toast.success("Contrato excluído com sucesso.");
     } catch {
-      setError("Não foi possível excluir o contrato.");
+      toast.error("Não foi possível excluir o contrato.");
     }
   }
 
@@ -118,8 +117,9 @@ export function ContractsPage() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+      toast.success("Contrato baixado com sucesso.");
     } catch {
-      setError("Não foi possível baixar o contrato.");
+      toast.error("Não foi possível baixar o contrato.");
     }
   }
 

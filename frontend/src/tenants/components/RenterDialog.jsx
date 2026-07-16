@@ -1,5 +1,6 @@
 import { Pencil, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import {
   formatPhone,
@@ -161,7 +162,11 @@ export function RenterDialog({ renter, onSubmit }) {
     try {
       await onSubmit(payload, rawDocuments, initialDocuments, handleClose);
     } catch (err) {
-      setDialogError(err.message);
+      if (err.message?.includes("Já existe um documento")) {
+        setDialogError(err.message);
+      } else {
+        toast.error(err.message || "Não foi possível salvar.");
+      }
       setIsSubmitting(false);
       return;
     }
