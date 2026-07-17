@@ -1,7 +1,7 @@
 # =============================================================================
-# CD — continuous deployment on master (ImobiManager)
+# CD — continuous deployment on main (ImobiManager)
 # -----------------------------------------------------------------------------
-# Runs on every push to master. Reuses the build-test composite, then pushes
+# Runs on every push to main. Reuses the build-test composite, then pushes
 # the prod images to GHCR (immutable sha-<short> + moving :latest) and promotes
 # the new tag into deploy/k8s/kustomization.yaml via `kustomize edit set image`.
 # Argo CD (homelab-infra) self-heals the new manifest → k3s rolls out.
@@ -16,10 +16,10 @@ name: CD
 
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 permissions:
-  contents: write   # commit the kustomize image bump back to master
+  contents: write   # commit the kustomize image bump back to main
   packages: write   # push prod images to GHCR
 
 concurrency:
