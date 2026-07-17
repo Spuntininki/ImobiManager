@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     app_name: str = "ImobiManager"
     database_url: str
-    test_database_url: str
+    test_database_url: str = ""
     secret_key: str = "dev-only-placeholder-override-SECRET_KEY-in-production"
     # CORS allowlist. Default permits the Vite dev server origin. In
     # production, set via the CORS_ORIGINS env var (comma-separated or JSON
