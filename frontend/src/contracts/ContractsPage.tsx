@@ -223,7 +223,7 @@ export function ContractsPage() {
                       </TableCell>
                       <TableCell>
                         {CURRENCY.format(Number(contract.deposit_value))} (
-                        {contract.deposit_months}x)
+                        {contract.deposit_months} {contract.deposit_months === 1 ? "mês" : "meses"})
                       </TableCell>
                       <TableCell>{contract.payment_day}</TableCell>
                       <TableCell>
