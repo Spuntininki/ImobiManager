@@ -32,9 +32,9 @@ spec:
             - secretRef:
                 name: backend-secret
           env:
-            # CORS allowlist for the production frontend origin.
+            # CORS allowlist for the production frontend origin (JSON array).
             - name: CORS_ORIGINS
-              value: https://app.sputinik.tech
+              value: '["https://imobimanager.spuntinik.tech"]'
             - name: GUNICORN_WORKERS
               value: "2"
           readinessProbe:
