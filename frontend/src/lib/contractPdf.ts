@@ -64,6 +64,6 @@ export async function parseContractPdfError(
     return null;
   }
 
-  const tokens = match[1].split(",").map((t) => t.trim());
+  const tokens = match[1]!.split(",").map((t) => t.trim());
   return translateMissingDocs(tokens);
 }
