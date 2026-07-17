@@ -1,0 +1,83 @@
+# =============================================================================
+# CD — continuous deployment on master (ImobiManager)
+# -----------------------------------------------------------------------------
+# Runs on every push to master. Reuses the build-test composite, then pushes
+# the prod images to GHCR (immutable sha-<short> + moving :latest) and promotes
+# the new tag into deploy/k8s/kustomization.yaml via `kustomize edit set image`.
+# Argo CD (homelab-infra) self-heals the new manifest → k3s rolls out.
+#
+# Promotion commits to the SAME repo using the default GITHUB_TOKEN, so no
+# extra PAT or deploy key is required for CI.
+#
+# Concurrency: only one CD run per ref at a time.
+# =============================================================================
+
+name: CD
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write   # commit the kustomize image bump back to master
+  packages: write   # push prod images to GHCR
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-test-push:
+    name: build-test-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d9abb9f69ca428e4159d96cdebb5a7f4f8aa9b9e # v5.1.2
+
+      - name: Build, lint, test, push
+        id: bt
+        uses: ./.github/actions/build-test
+        with:
+          push-images: "true"
+
+  promote:
+    name: promote-image-tag
+    runs-on: ubuntu-latest
+    needs: build-test-push
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d9abb9f69ca428e4159d96cdebb5a7f4f8aa9b9e # v5.1.2
+        with:
+          # Use the default GITHUB_TOKEN so we can push the bump commit.
+          token: ${{ github.token }}
+          fetch-depth: 0
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      - name: Resolve short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump image tag in kustomization
+        working-directory: deploy/k8s
+        run: |
+          # kustomize edit set image rewrites the `images:` block in
+          # kustomization.yaml to pin the new sha tag.
+          kustomize edit set image \
+            ghcr.io/spuntininki/imobimanager-backend=ghcr.io/spuntininki/imobimanager-backend:sha-${{ steps.sha.outputs.short }}
+          kustomize edit set image \
+            ghcr.io/spuntininki/imobimanager-frontend=ghcr.io/spuntininki/imobimanager-frontend:sha-${{ steps.sha.outputs.short }}
+          echo "===> kustomization.yaml images:"
+          grep -A4 'images:' kustomization.yaml
+
+      - name: Commit & push promotion
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deploy/k8s/kustomization.yaml
+          git commit -m "deploy: imobimanager → sha-${{ steps.sha.outputs.short }}"
+          git push
