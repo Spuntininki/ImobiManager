@@ -1,8 +1,10 @@
 # =============================================================================
-# Frontend Ingress
+# Ingress (single entry point)
 # -----------------------------------------------------------------------------
-# Exposed as app.sputinik.tech via Cloudflare Tunnel. See ingress-backend.yaml
-# for TLS/tunnel notes.
+# Exposed as imobimanager.spuntinik.tech via Cloudflare Tunnel.
+# The frontend Nginx proxies /api/ → backend:8000, so one ingress covering
+# the frontend service handles both the SPA and API traffic.
+# TLS terminated at the cluster by cert-manager self-signed issuer.
 # =============================================================================
 
 apiVersion: networking.k8s.io/v1
@@ -17,10 +19,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - app.sputinik.tech
-      secretName: frontend-tls
+        - imobimanager.spuntinik.tech
+      secretName: imobimanager-tls
   rules:
-    - host: app.sputinik.tech
+    - host: imobimanager.spuntinik.tech
       http:
         paths:
           - path: /
