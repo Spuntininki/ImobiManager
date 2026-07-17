@@ -1,0 +1,38 @@
+# =============================================================================
+# CI — pull request gate (ImobiManager)
+# -----------------------------------------------------------------------------
+# Runs on every PR targeting master. Builds, lints, and tests; never pushes.
+# All build/test logic lives in the reusable composite action
+# `.github/actions/build-test` so this file and cd.yml share one source of truth.
+#
+# Branch protection (configure once in GitHub UI):
+#   master → require status checks:
+#     build-test (this workflow's job name)
+# =============================================================================
+
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.ref }}-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d9abb9f69ca428e4159d96cdebb5a7f4f8aa9b9e # v5.1.2
+
+      - name: Build, lint, test
+        uses: ./.github/actions/build-test
+        with:
+          push-images: "false"
