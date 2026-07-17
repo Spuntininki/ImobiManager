@@ -27,7 +27,6 @@ resources:
 - backend-external-secret.yaml
 - frontend-deployment.yaml
 - frontend-service.yaml
-- ingress-backend.yaml
 - ingress-frontend.yaml
 
 images:
