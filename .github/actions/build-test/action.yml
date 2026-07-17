@@ -33,7 +33,7 @@ runs:
   using: composite
   steps:
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@d164cd0c341a3a923905864251649e6d032f9d3e # v3.11.1
+      uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
       with:
         driver-opts: |
           image=moby/buildkit:latest
@@ -48,7 +48,7 @@ runs:
 
     - name: Login to GHCR
       if: inputs.push-images == 'true'
-      uses: docker/login-action@5e77a1b47c7f3e1e9d2b19f7a9b87b9e8e5c1b1e # v3.6.0
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -129,7 +129,7 @@ runs:
         echo "frontend-immutable=ghcr.io/spuntininki/imobimanager-frontend:${tag}" >> "$GITHUB_OUTPUT"
 
     - name: Build & push backend (prod)
-      uses: docker/build-push-action@2634354f7851b9c2825f6eabe1814a9e7d # v6.18.0
+      uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
       with:
         context: ./backend
         target: prod
@@ -142,7 +142,7 @@ runs:
         provenance: false
 
     - name: Build & push frontend (prod)
-      uses: docker/build-push-action@2634354f7851f9481b9c2825f6eabe1814a9e7d # v6.18.0
+      uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
       with:
         context: ./frontend
         target: prod
