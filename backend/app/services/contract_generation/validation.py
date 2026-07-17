@@ -53,9 +53,7 @@ def validate_template(template: dict, formatters: dict) -> None:
     content = template.get("content")
     replace = template.get("replace")
     if not isinstance(content, dict) or not isinstance(replace, dict):
-        raise ValueError(
-            "Template must have 'content' and 'replace' top-level dicts"
-        )
+        raise ValueError("Template must have 'content' and 'replace' top-level dicts")
 
     # 1. Section types must be known to the renderer.
     for section_name, section in content.items():
@@ -78,9 +76,7 @@ def validate_template(template: dict, formatters: dict) -> None:
         if not isinstance(entry, dict):
             raise ValueError(f"Token {token!r} entry must be a dict")
         if entry.get("computed") and token not in formatters:
-            raise ValueError(
-                f"Token {token!r} is marked computed but has no registered formatter"
-            )
+            raise ValueError(f"Token {token!r} is marked computed but has no registered formatter")
         if "table" not in entry:
             raise ValueError(f"Token {token!r} is missing 'table'")
         if not entry.get("computed") and "colum" not in entry:
@@ -108,6 +104,4 @@ def _check_document_type(value, token: str) -> None:
     try:
         DocumentType(value)
     except ValueError as e:
-        raise ValueError(
-            f"Token {token!r} has invalid document_type {value!r}"
-        ) from e
+        raise ValueError(f"Token {token!r} has invalid document_type {value!r}") from e

@@ -53,9 +53,7 @@ def upgrade() -> None:
             """
         ).bindparams(
             sa.bindparam("code", value=STANDARD_TEMPLATE_CODE, type_=sa.String()),
-            sa.bindparam(
-                "content", value=json.dumps(load_default_content()), type_=sa.Text()
-            ),
+            sa.bindparam("content", value=json.dumps(load_default_content()), type_=sa.Text()),
         )
     )
 

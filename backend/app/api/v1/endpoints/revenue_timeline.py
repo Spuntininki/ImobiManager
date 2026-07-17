@@ -48,10 +48,12 @@ async def get_owner_revenue_timeline_summary(
     session: AsyncSession = Depends(get_db),
 ) -> RevenueTimelineSummary:
     """Return aggregated summary of projected revenue for an owner."""
-    _items, total_amount, total_payments = (
-        await revenue_timeline_service.generate_owner_revenue_timeline(
-            session, owner_id, start_date=start_date, end_date=end_date
-        )
+    (
+        _items,
+        total_amount,
+        total_payments,
+    ) = await revenue_timeline_service.generate_owner_revenue_timeline(
+        session, owner_id, start_date=start_date, end_date=end_date
     )
     return RevenueTimelineSummary(
         total_amount=total_amount,

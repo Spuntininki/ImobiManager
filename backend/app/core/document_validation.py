@@ -14,9 +14,9 @@ def _cnpj_char_value(c: str) -> int:
     0-9 → 0-9, A-Z → 17-42.
     """
     code = ord(c)
-    if 48 <= code <= 57:   # 0-9
+    if 48 <= code <= 57:  # 0-9
         return code - 48
-    if 65 <= code <= 90:   # A-Z
+    if 65 <= code <= 90:  # A-Z
         return code - 48
     raise ValueError(f"Invalid CNPJ character: '{c}'")
 
