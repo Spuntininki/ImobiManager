@@ -1,0 +1,163 @@
+# =============================================================================
+# build-test composite action
+# -----------------------------------------------------------------------------
+# Single source of truth for the pre-merge verification gate. Runs:
+#   1. Lint backend (ruff) and frontend (tsc + eslint) via the dev images.
+#   2. Build the prod images (optional push to GHCR when `push-images` is true).
+#   3. Test: ephemeral Postgres via the existing docker-compose, run pytest
+#      (backend dev image) and vitest (frontend dev image), then teardown.
+# Always tears down the ephemeral stack, even on failure.
+#
+# Inputs:
+#   push-images  - when true, push prod images to GHCR (cd.yml on master).
+#   image-tag    - immutable tag to push under (e.g. `sha-<short>`); also
+#                  pushes `:latest`. Ignored unless `push-images` is true.
+#
+# Required secrets (auto): GITHUB_TOKEN (for GHCR auth + packages: write).
+# =============================================================================
+
+name: build-test
+description: Build, lint, and test ImobiManager (backend + frontend). Optionally push prod images to GHCR.
+
+inputs:
+  push-images:
+    description: Push the prod images to GHCR (cd.yml only).
+    required: false
+    default: "false"
+  image-tag:
+    description: Immutable tag for pushed images (e.g. sha-<short>).
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
+      with:
+        driver-opts: |
+          image=moby/buildkit:latest
+
+    - name: Resolve cache refs
+      id: cache
+      shell: bash
+      run: |
+        # Shared OCI cache ref per image keeps cross-run layer reuse fast.
+        echo "backend-cache=type=registry,ref=ghcr.io/spuntininki/imobimanager-backend/buildcache,mode=max" >> "$GITHUB_OUTPUT"
+        echo "frontend-cache=type=registry,ref=ghcr.io/spuntininki/imobimanager-frontend/buildcache,mode=max" >> "$GITHUB_OUTPUT"
+
+    - name: Login to GHCR
+      if: inputs.push-images == 'true'
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
+    - name: Resolve short SHA
+      id: sha
+      shell: bash
+      run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+    # ---- Build dev images (used by lint + test steps) via the existing compose.
+    - name: Write .env for tests
+      shell: bash
+      run: |
+        # Ephemeral test values only — not production secrets.
+        cat > .env <<'EOF'
+        DATABASE_URL=postgresql+asyncpg://imobi:imobi@postgres:5432/imobimanager
+        TEST_DATABASE_URL=postgresql+asyncpg://imobi:imobi@postgres:5432/imobimanager_test
+        SECRET_KEY=ci-test-secret-not-for-production
+        VITE_API_PROXY_TARGET=http://backend:8000
+        EOF
+
+    - name: Build dev images (docker compose)
+      shell: bash
+      run: docker compose build backend frontend
+
+    # ---- Start ephemeral Postgres before any step that may touch the DB ----
+    # Notes on `--entrypoint ""`:
+    # The backend Dockerfile dev stage runs entrypoint.sh, which executes
+    # `alembic upgrade head` unconditionally. That tries to resolve the
+    # `postgres` hostname and crashes when no DB is reachable (e.g. during
+    # lint) or double-runs migrations before pytest. `--entrypoint ""`
+    # bypasses entrypoint.sh so the supplied command (ruff / pytest / tsc)
+    # runs directly. Tests create their own schema via conftest fixtures
+    # (Base.metadata.create_all), so alembic is not needed in CI.
+    - name: Start ephemeral Postgres
+      shell: bash
+      run: |
+        # Unique project keeps the volume isolated from any stray stack.
+        docker compose -p "ci-${{ github.run_id }}" up -d --wait postgres
+
+    # ---- Lint ----
+    - name: Lint backend (ruff)
+      shell: bash
+      run: |
+        docker compose run --rm --no-deps --entrypoint "" backend \
+          uv run ruff check . && \
+        docker compose run --rm --no-deps --entrypoint "" backend \
+          uv run ruff format --check .
+
+    - name: Lint frontend (tsc + eslint)
+      shell: bash
+      run: |
+        docker compose run --rm --no-deps --entrypoint "" frontend \
+          npx tsc --noEmit && \
+        docker compose run --rm --no-deps --entrypoint "" frontend \
+          npm run lint
+
+    - name: Run backend tests (pytest)
+      shell: bash
+      run: |
+        docker compose -p "ci-${{ github.run_id }}" run --rm --entrypoint "" backend \
+          uv run pytest -q
+
+    - name: Run frontend tests (vitest)
+      shell: bash
+      run: |
+        docker compose -p "ci-${{ github.run_id }}" run --rm --no-deps --entrypoint "" frontend \
+          npm run test:run
+
+    - name: Teardown ephemeral stack
+      if: always()
+      shell: bash
+      run: |
+        docker compose -p "ci-${{ github.run_id }}" down -v || true
+
+    # ---- Build (and optionally push) prod images ----
+    - name: Resolve image tags
+      id: img
+      shell: bash
+      run: |
+        # Default immutable tag = sha-<short>; overridable via input.
+        tag="${{ inputs.image-tag }}"
+        if [ -z "$tag" ]; then tag="sha-${{ steps.sha.outputs.short }}"; fi
+        echo "backend-immutable=ghcr.io/spuntininki/imobimanager-backend:${tag}" >> "$GITHUB_OUTPUT"
+        echo "frontend-immutable=ghcr.io/spuntininki/imobimanager-frontend:${tag}" >> "$GITHUB_OUTPUT"
+
+    - name: Build & push backend (prod)
+      uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+      with:
+        context: ./backend
+        target: prod
+        push: ${{ inputs.push-images == 'true' }}
+        tags: |
+          ${{ steps.img.outputs.backend-immutable }}
+          ghcr.io/spuntininki/imobimanager-backend:latest
+        cache-from: ${{ steps.cache.outputs.backend-cache }}
+        cache-to: ${{ (inputs.push-images == 'true') && steps.cache.outputs.backend-cache || '' }}
+        provenance: false
+
+    - name: Build & push frontend (prod)
+      uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+      with:
+        context: ./frontend
+        target: prod
+        push: ${{ inputs.push-images == 'true' }}
+        tags: |
+          ${{ steps.img.outputs.frontend-immutable }}
+          ghcr.io/spuntininki/imobimanager-frontend:latest
+        cache-from: ${{ steps.cache.outputs.frontend-cache }}
+        cache-to: ${{ (inputs.push-images == 'true') && steps.cache.outputs.frontend-cache || '' }}
+        provenance: false

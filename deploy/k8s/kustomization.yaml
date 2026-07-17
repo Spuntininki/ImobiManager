@@ -1,0 +1,37 @@
+# =============================================================================
+# ImobiManager - Kubernetes manifests (Kustomize root)
+# -----------------------------------------------------------------------------
+# Deployed by Argo CD via `homelab-infra/clusters/local/imobimanager-application.yaml`.
+#
+# Image promotion: the `images` block below is managed by CI (`cd.yml`) using
+# `kustomize edit set image`. Do NOT hand-edit the image tags in the Deployment
+# manifests (they hold placeholders that the `images` override replaces).
+#
+# Secrets: no kubernetes.io/dockerconfigjson needed (GHCR packages are public).
+# `postgres-secret` and `backend-secret` are created at runtime by ExternalSecrets
+# from Vault (see *-external-secret.yaml). Do not commit the generated Secrets.
+# =============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: imobimanager
+
+resources:
+  - namespace.yaml
+  - postgres-statefulset.yaml
+  - postgres-service.yaml
+  - postgres-external-secret.yaml
+  - backend-deployment.yaml
+  - backend-service.yaml
+  - backend-external-secret.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - ingress-backend.yaml
+  - ingress-frontend.yaml
+
+images:
+  - name: ghcr.io/spuntininki/imobimanager-backend
+    newTag: latest
+  - name: ghcr.io/spuntininki/imobimanager-frontend
+    newTag: latest

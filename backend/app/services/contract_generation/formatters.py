@@ -26,8 +26,19 @@ from app.models.renter_document import RenterDocument
 
 # pt-BR long-form month names, indexed 1..12 (index 0 is unused).
 _MONTHS_PT_BR = (
-    "", "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+    "",
+    "janeiro",
+    "fevereiro",
+    "março",
+    "abril",
+    "maio",
+    "junho",
+    "julho",
+    "agosto",
+    "setembro",
+    "outubro",
+    "novembro",
+    "dezembro",
 )
 
 
@@ -123,7 +134,7 @@ def monthly_revenue_desc(contract: Contract) -> str:
     truncated — the template appends 'reais' separately and never mentions
     centavos.
     """
-    return num2words(int(contract.monthly_revenue), lang='pt_BR')
+    return num2words(int(contract.monthly_revenue), lang="pt_BR")
 
 
 def contract_time_desc(contract: Contract) -> str:
@@ -221,9 +232,7 @@ def format_document(doc: OwnerDocument | RenterDocument) -> str:
         case DocumentType.RG:
             return _format_rg(doc.document)
         case _:
-            raise ValueError(
-                f"No document formatter for type {doc.document_type!r}"
-            )
+            raise ValueError(f"No document formatter for type {doc.document_type!r}")
 
 
 __all__ = [

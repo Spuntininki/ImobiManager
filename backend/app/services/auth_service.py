@@ -8,9 +8,7 @@ from app.core.security import verify_password
 from app.models.user import User
 
 
-async def authenticate(
-    session: AsyncSession, email: str, password: str
-) -> str | None:
+async def authenticate(session: AsyncSession, email: str, password: str) -> str | None:
     """Verify credentials and return a JWT, or None if invalid."""
     result = await session.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()

@@ -55,6 +55,7 @@ FORMATTERS = {
     "cooccupants": formatters.cooccupants,
 }
 
+
 async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
     """Load a contract + all related rows in a single join.
 

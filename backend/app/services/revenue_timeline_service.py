@@ -38,9 +38,7 @@ def _generate_contract_payment_dates(
 
     # Clamp the requested payment day to the start month's last valid day,
     # mirroring _add_months (a payment_day of 31 must not crash on Feb/Apr/etc.).
-    first_day = min(
-        payment_day, calendar.monthrange(start_date.year, start_date.month)[1]
-    )
+    first_day = min(payment_day, calendar.monthrange(start_date.year, start_date.month)[1])
     first_candidate = date(start_date.year, start_date.month, first_day)
     if first_candidate < start_date:
         first_candidate = _add_months(first_candidate, 1)

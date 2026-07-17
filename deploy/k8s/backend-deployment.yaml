@@ -1,0 +1,58 @@
+# =============================================================================
+# Backend Deployment
+# -----------------------------------------------------------------------------
+# Image tag is overridden by the kustomization `images` block (managed by CI).
+# Secrets (DATABASE_URL, SECRET_KEY) come from `backend-secret`, created at
+# runtime by ExternalSecrets from Vault. On boot the entrypoint runs
+# `alembic upgrade head` (single replica only; scale guards need a PreSync Hook).
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: imobimanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          # Tag overridden by kustomize `images` block; placeholder here.
+          image: ghcr.io/spuntininki/imobimanager-backend:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: backend-secret
+          env:
+            # CORS allowlist for the production frontend origin.
+            - name: CORS_ORIGINS
+              value: https://app.sputinik.tech
+            - name: GUNICORN_WORKERS
+              value: "2"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

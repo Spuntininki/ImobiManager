@@ -1,0 +1,34 @@
+# =============================================================================
+# Backend Ingress
+# -----------------------------------------------------------------------------
+# Exposed as api.sputinik.tech via Cloudflare Tunnel (dashboard-managed ingress
+# rule -> traefik.kube-system.svc.cluster.local). TLS terminated at the cluster
+# by cert-manager self-signed issuer; Cloudflare presents a valid cert to users
+# with "No TLS Verify" + TLS mode Full (per homelab-infra README).
+# =============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend
+  namespace: imobimanager
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: selfsigned-issuer
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.sputinik.tech
+      secretName: backend-tls
+  rules:
+    - host: api.sputinik.tech
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000

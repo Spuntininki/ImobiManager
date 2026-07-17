@@ -16,11 +16,14 @@ class AddressCreate(BaseModel):
     neighborhood: str = Field(..., min_length=1, max_length=255)
     city: str = Field(..., min_length=1, max_length=255)
     state: str = Field(
-        ..., min_length=2, max_length=2,
+        ...,
+        min_length=2,
+        max_length=2,
         pattern=r"^[A-Z]{2}$",
     )
     zip_code: str = Field(
-        ..., pattern=r"^\d{5}-?\d{3}$",
+        ...,
+        pattern=r"^\d{5}-?\d{3}$",
     )
     type: PropertyType
 
@@ -34,11 +37,14 @@ class AddressUpdate(BaseModel):
     neighborhood: str = Field(..., min_length=1, max_length=255)
     city: str = Field(..., min_length=1, max_length=255)
     state: str = Field(
-        ..., min_length=2, max_length=2,
+        ...,
+        min_length=2,
+        max_length=2,
         pattern=r"^[A-Z]{2}$",
     )
     zip_code: str = Field(
-        ..., pattern=r"^\d{5}-?\d{3}$",
+        ...,
+        pattern=r"^\d{5}-?\d{3}$",
     )
     type: PropertyType
 

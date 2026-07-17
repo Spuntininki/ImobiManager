@@ -10,11 +10,15 @@ class RenterCreate(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255)
     primary_contact: str = Field(
-        ..., min_length=8, max_length=20,
+        ...,
+        min_length=8,
+        max_length=20,
         pattern=r"^(\+55\s?)?\d{2}\s?\d{4,5}-?\d{4}$",
     )
     secondary_contact: str | None = Field(
-        default=None, min_length=8, max_length=20,
+        default=None,
+        min_length=8,
+        max_length=20,
         pattern=r"^(\+55\s?)?\d{2}\s?\d{4,5}-?\d{4}$",
     )
     email: EmailStr | None = None
@@ -25,11 +29,15 @@ class RenterUpdate(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255)
     primary_contact: str = Field(
-        ..., min_length=8, max_length=20,
+        ...,
+        min_length=8,
+        max_length=20,
         pattern=r"^(\+55\s?)?\d{2}\s?\d{4,5}-?\d{4}$",
     )
     secondary_contact: str | None = Field(
-        default=None, min_length=8, max_length=20,
+        default=None,
+        min_length=8,
+        max_length=20,
         pattern=r"^(\+55\s?)?\d{2}\s?\d{4,5}-?\d{4}$",
     )
     email: EmailStr | None = None

@@ -50,9 +50,7 @@ class BaseDocumentService:
     async def list_documents(self, session: AsyncSession, scope_id: int) -> list:
         """Return all documents for the scope, ordered by id."""
         result = await session.execute(
-            select(self._model)
-            .where(self._scope_column == scope_id)
-            .order_by(self._model.id)
+            select(self._model).where(self._scope_column == scope_id).order_by(self._model.id)
         )
         return list(result.scalars().all())
 

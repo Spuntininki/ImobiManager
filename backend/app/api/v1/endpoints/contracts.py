@@ -132,9 +132,7 @@ async def update_contract(
     session: AsyncSession = Depends(get_db),
 ) -> ContractRead:
     try:
-        updated = await contract_service.update_contract(
-            session, contract_id, payload
-        )
+        updated = await contract_service.update_contract(session, contract_id, payload)
     except ContractRelationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
