@@ -30,8 +30,17 @@ from app.models.enums import DocumentType
 # Section types the renderer knows how to dispatch on.
 _KNOWN_SECTION_TYPES = frozenset({"title", "paragh", "sign"})
 
-# Matches ``<REPLACE>token</REPLACE>`` tokens in template lines.
-_TOKEN_RE = re.compile(r"<REPLACE>(.*?)</REPLACE>")
+# Matches ``<REPLACE>token</REPLACE>`` tokens in template lines. Shared by the
+# validator and the orchestrator's token-fill step.
+TOKEN_RE = re.compile(r"<REPLACE>(.*?)</REPLACE>")
+
+
+class ContractNotFoundError(Exception):
+    """Raised by the contract PDF pipeline when the contract id does not exist.
+
+    Kept here (rather than in an ``exceptions`` module) because the pipeline
+    is the only producer; the contracts endpoint is the only consumer.
+    """
 
 
 def validate_template(template: dict, formatters: dict) -> None:
@@ -83,7 +92,7 @@ def validate_template(template: dict, formatters: dict) -> None:
 def _check_tokens_referenced(line, section_name: str, replace: dict) -> None:
     """Recurse into list-of-strings lines (the sign block is a nested list)."""
     if isinstance(line, str):
-        for token in _TOKEN_RE.findall(line):
+        for token in TOKEN_RE.findall(line):
             if token not in replace:
                 raise ValueError(
                     f"Token {token!r} referenced in section '{section_name}' "

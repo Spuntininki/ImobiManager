@@ -17,7 +17,7 @@ services:
       - "5433:5432"
     volumes:
       - imobimanager-postgres-data:/var/lib/postgresql/data
-      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backend/schema/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -U imobi -d imobimanager"]
       interval: 5s
@@ -33,9 +33,6 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:5174"]'}
       UVICORN_RELOAD: ${UVICORN_RELOAD:-true}
     ports:
       - "8000:8000"

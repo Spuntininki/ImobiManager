@@ -1,19 +1,9 @@
 """Contract PDF generation pipeline — orchestrates fetch + fill + render.
 
-Composes the three concerns from ``contract_generation`` against an injected
-``AsyncSession``:
-
-1. ``_fetch_contract_data`` — single-join query that loads the contract plus
-   its owner, renter, address, and the four document rows (owner/renter ×
-   CPF/RG). Returns a dict keyed by table name so token lookup stays O(1).
-2. ``_fill_tokens`` — pure function that walks the template's ``replace``
-   entries, dispatching each to either a registered formatter (``computed``)
-   or a plain ``getattr`` (pass-through), then substitutes the values into
-   the section lines, producing ``converted_data`` ready for the renderer.
-3. ``render`` — produces PDF bytes from ``converted_data`` + the template's
-   ``style`` dict.
-
-The public entrypoint is ``generate_contract_pdf``.
+Composes the pieces from the ``contract_generation`` package (see its
+docstring for the pipeline overview) against an injected ``AsyncSession``.
+``generate_contract_pdf`` is the public entrypoint; ``build_contract_pdf_filename``
+builds the download filename (renter-name → ASCII slug + contract id).
 """
 
 import re
@@ -22,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.filenames import to_ascii_filename_slug
 from app.models.address import Address
 from app.models.contract import Contract
 from app.models.contract_template import ContractTemplate
@@ -32,7 +23,16 @@ from app.models.renter import Renter
 from app.models.renter_document import RenterDocument
 from app.services.contract_generation import formatters
 from app.services.contract_generation.renderer import render
-from app.services.contract_generation.validation import validate_template
+from app.services.contract_generation.validation import (
+    TOKEN_RE,
+    ContractNotFoundError,
+    validate_template,
+)
+
+# Portuguese name connector particles — dropped so the contract PDF filename
+# keeps the first two *names* (e.g. "João da Silva" → "Joao_Silva", not
+# "Joao_da"). Lives here because this is a renter-name presentation rule.
+_NAME_CONNECTORS = frozenset({"da", "de", "do", "das", "dos", "e"})
 
 # Token → formatter dispatch table. JSON decides routing via the ``computed``
 # flag; this dict is the single place that knows which Python function handles
@@ -55,10 +55,6 @@ FORMATTERS = {
     "cooccupants": formatters.cooccupants,
 }
 
-# Matches ``<REPLACE>token</REPLACE>`` tokens in template lines.
-_TOKEN_RE = re.compile(r"<REPLACE>(.*?)</REPLACE>")
-
-
 async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
     """Load a contract + all related rows in a single join.
 
@@ -66,8 +62,8 @@ async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
     tables are nested sub-dicts keyed by ``document_type`` (CPF / RG) because
     the same table is joined once per type.
 
-    Raises ``sqlalchemy.exc.NoResultFound`` if the contract does not exist —
-    the endpoint translates that to 404.
+    Raises ``ContractNotFoundError`` if the contract does not exist — the
+    endpoint translates that to 404.
     """
     OwnerDocCPF = aliased(OwnerDocument)
     OwnerDocRG = aliased(OwnerDocument)
@@ -75,20 +71,17 @@ async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
     RenterDocRG = aliased(RenterDocument)
 
     stmt = (
-        select(Contract, Owner, Renter, Address,
-               OwnerDocCPF, OwnerDocRG, RenterDocCPF, RenterDocRG)
+        select(Contract, Owner, Renter, Address, OwnerDocCPF, OwnerDocRG, RenterDocCPF, RenterDocRG)
         .join(Owner, Contract.owner_id == Owner.id)
         .join(Renter, Contract.renter_id == Renter.id)
         .join(Address, Contract.address_id == Address.id)
         .outerjoin(
             OwnerDocCPF,
-            (OwnerDocCPF.owner_id == Owner.id)
-            & (OwnerDocCPF.document_type == DocumentType.CPF),
+            (OwnerDocCPF.owner_id == Owner.id) & (OwnerDocCPF.document_type == DocumentType.CPF),
         )
         .outerjoin(
             OwnerDocRG,
-            (OwnerDocRG.owner_id == Owner.id)
-            & (OwnerDocRG.document_type == DocumentType.RG),
+            (OwnerDocRG.owner_id == Owner.id) & (OwnerDocRG.document_type == DocumentType.RG),
         )
         .outerjoin(
             RenterDocCPF,
@@ -97,13 +90,14 @@ async def _fetch_contract_data(session: AsyncSession, contract_id: int) -> dict:
         )
         .outerjoin(
             RenterDocRG,
-            (RenterDocRG.renter_id == Renter.id)
-            & (RenterDocRG.document_type == DocumentType.RG),
+            (RenterDocRG.renter_id == Renter.id) & (RenterDocRG.document_type == DocumentType.RG),
         )
         .where(Contract.id == contract_id)
     )
     result = await session.execute(stmt)
-    row = result.one()
+    row = result.one_or_none()
+    if row is None:
+        raise ContractNotFoundError(f"Contract {contract_id} not found")
 
     (
         contract,
@@ -155,12 +149,9 @@ def _fill_tokens(template: dict, contract_data: dict) -> dict:
     Pure: no I/O, no side effects on the inputs (the template dict is copied
     before mutation so the caller's template row stays pristine).
     """
-    # Copy the template so we never mutate the row loaded from the DB.
     working = {
         "content": template["content"],
-        "replace": {
-            token: dict(entry) for token, entry in template["replace"].items()
-        },
+        "replace": {token: dict(entry) for token, entry in template["replace"].items()},
     }
 
     for token, entry in working["replace"].items():
@@ -185,9 +176,9 @@ def _fill_tokens(template: dict, contract_data: dict) -> dict:
         lines: list = []
         for line in section["lines"]:
             if isinstance(line, list):
-                lines.append([_TOKEN_RE.sub(replacer, item) for item in line])
+                lines.append([TOKEN_RE.sub(replacer, item) for item in line])
             else:
-                lines.append(_TOKEN_RE.sub(replacer, line))
+                lines.append(TOKEN_RE.sub(replacer, line))
         converted_data[section_name] = {"lines": lines, "type": section["type"]}
     return converted_data
 
@@ -205,7 +196,7 @@ async def generate_contract_pdf(
     Raises:
         ValueError: if the template row is missing/inactive or a required
             document is absent on the contract.
-        sqlalchemy.exc.NoResultFound: if ``contract_id`` does not exist.
+        ContractNotFoundError: if ``contract_id`` does not exist.
     """
     template_row = await session.scalar(
         select(ContractTemplate).where(
@@ -224,3 +215,19 @@ async def generate_contract_pdf(
     contract_data = await _fetch_contract_data(session, contract_id)
     converted_data = _fill_tokens(template_row.content, contract_data)
     return render(converted_data, template_row.style)
+
+
+def build_contract_pdf_filename(renter_name: str | None, contract_id: int) -> str:
+    """Build the download filename for a contract PDF.
+
+    Reduces ``renter_name`` to its first two non-connector tokens (so
+    "João da Silva" → "Joao_Silva", dropping the pt-BR particle "da"),
+    deburrs accents to ASCII via ``to_ascii_filename_slug``, and combines
+    with the contract id for uniqueness: ``Contrato-<slug>-<contract_id>.pdf``.
+    Falls back to ``Contrato-renter-<contract_id>.pdf`` when the name has no
+    usable tokens (defensive only — the DB enforces non-empty names).
+    """
+    tokens = [t for t in (renter_name or "").split() if t.lower() not in _NAME_CONNECTORS][:2]
+    slug = to_ascii_filename_slug(" ".join(tokens))
+    name_part = slug or "renter"
+    return f"Contrato-{name_part}-{contract_id}.pdf"

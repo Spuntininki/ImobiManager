@@ -53,7 +53,6 @@ async def delete_owner(session: AsyncSession, owner_id: int) -> bool:
 
     Returns True if deleted, False if not found.
     """
-    # TODO(phase future): replace physical delete with soft delete.
     owner = await get_owner(session, owner_id)
     if owner is None:
         return False

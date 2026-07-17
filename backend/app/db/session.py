@@ -18,7 +18,13 @@ async_session_factory = async_sessionmaker(
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:
-    """FastAPI dependency that yields an async session and rolls back on exit."""
+    """FastAPI dependency that yields an async session and commits on exit.
+
+    Transaction boundaries: write paths commit inside the service they
+    belong to (e.g. ``await session.commit()`` before returning). The trailing
+    ``commit()`` here is a safety net that no-ops for write paths and commits
+    read-only paths; on any exception the session rolls back and re-raises.
+    """
     async with async_session_factory() as session:
         try:
             yield session

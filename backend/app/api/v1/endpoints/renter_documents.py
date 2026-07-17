@@ -47,7 +47,7 @@ async def list_documents(
     _renter: Renter = Depends(get_current_active_renter),
     session: AsyncSession = Depends(get_db),
 ) -> list[RenterDocumentRead]:
-    docs = await renter_document_service.list_documents_for_renter(session, renter_id)
+    docs = await renter_document_service.list_documents(session, renter_id)
     return [RenterDocumentRead.model_validate(d) for d in docs]
 
 
@@ -56,16 +56,13 @@ async def list_documents(
     response_model=RenterDocumentRead,
 )
 async def get_document(
+    renter_id: int,
     document_id: int,
     _renter: Renter = Depends(get_current_active_renter),
     session: AsyncSession = Depends(get_db),
 ) -> RenterDocumentRead:
-    doc = await renter_document_service.get_document(session, document_id)
+    doc = await renter_document_service.get_document(session, renter_id, document_id)
     if doc is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    # Defense in depth: never leak a document for a different renter than
-    # the scoped one. (document_id is independent of renter_id in the URL.)
-    if doc.renter_id != _renter.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return RenterDocumentRead.model_validate(doc)
 
@@ -75,23 +72,21 @@ async def get_document(
     response_model=RenterDocumentRead,
 )
 async def update_document(
+    renter_id: int,
     document_id: int,
     payload: RenterDocumentUpdate,
-    renter: Renter = Depends(get_current_active_renter),
+    _renter: Renter = Depends(get_current_active_renter),
     session: AsyncSession = Depends(get_db),
 ) -> RenterDocumentRead:
-    doc = await renter_document_service.get_document(session, document_id)
-    if doc is None or doc.renter_id != renter.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     try:
-        updated = await renter_document_service.update_document(session, document_id, payload)
+        updated = await renter_document_service.update_document(
+            session, renter_id, document_id, payload
+        )
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Document of this type already exists for this renter",
         ) from None
-    # update_document returns None only when the doc vanished mid-flight;
-    # we already checked existence above, but guard defensively.
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return RenterDocumentRead.model_validate(updated)
@@ -101,15 +96,12 @@ async def update_document(
     "/renters/{renter_id}/documents/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_document(
+    renter_id: int,
     document_id: int,
-    renter: Renter = Depends(get_current_active_renter),
+    _renter: Renter = Depends(get_current_active_renter),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    doc = await renter_document_service.get_document(session, document_id)
-    if doc is None or doc.renter_id != renter.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    deleted = await renter_document_service.delete_document(session, document_id)
+    deleted = await renter_document_service.delete_document(session, renter_id, document_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")

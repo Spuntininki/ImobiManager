@@ -4,7 +4,7 @@ import io
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import (
@@ -13,9 +13,11 @@ from app.api.v1.dependencies import (
 )
 from app.db.session import get_db
 from app.models.contract import Contract
-from app.models.user import User
+from app.models.owner import Owner
+from app.models.renter import Renter
 from app.schemas.contract import ContractCreate, ContractRead, ContractUpdate
 from app.services import contract_pdf_service, contract_service
+from app.services.contract_generation.validation import ContractNotFoundError
 from app.services.contract_service import ContractRelationError
 
 router = APIRouter(tags=["contracts"])
@@ -32,7 +34,7 @@ router = APIRouter(tags=["contracts"])
 async def create_contract(
     owner_id: int,
     payload: ContractCreate,
-    _user: User = Depends(get_current_active_owner),
+    _owner: Owner = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> ContractRead:
     try:
@@ -51,7 +53,7 @@ async def create_contract(
 )
 async def list_contracts_for_owner(
     owner_id: int,
-    _user: User = Depends(get_current_active_owner),
+    _owner: Owner = Depends(get_current_active_owner),
     session: AsyncSession = Depends(get_db),
 ) -> list[ContractRead]:
     contracts = await contract_service.list_contracts_for_owner(session, owner_id)
@@ -80,10 +82,13 @@ async def get_contract_pdf(
     """Stream the rendered contract PDF back to the browser.
 
     Auth/permission scoping reuses ``get_current_active_contract`` — the
-    caller must be linked to the contract's owner. Returns the PDF inline
-    (``Content-Disposition: inline``) so the browser displays it rather
-    than triggering a download dialog. Switch to ``attachment; filename=...``
-    if a download UX is desired later.
+    caller must be linked to the contract's owner. The response uses
+    ``Content-Disposition: attachment; filename="Contrato-<renter>-<id>.pdf"``
+    so the browser triggers a download dialog with a friendly, unique name.
+    The filename is built by ``contract_pdf_service.build_contract_pdf_filename``
+    from the first two name tokens (deburred to ASCII, e.g. "João da Silva" →
+    "Joao_Silva") plus the contract id; the fallback is
+    ``Contrato-renter-<id>.pdf`` when the name has no usable tokens.
 
     A ``?template_code=`` query param overrides the default ``standard``
     template, allowing future commercial/rural variants once seeded.
@@ -92,10 +97,9 @@ async def get_contract_pdf(
         pdf_bytes = await contract_pdf_service.generate_contract_pdf(
             session, contract.id, template_code
         )
-    except NoResultFound:
-        # The join query in the pipeline raised — contract vanished between
-        # the dependency check and here. Treat as 404 to stay consistent
-        # with the rest of the resource.
+    except ContractNotFoundError:
+        # The contract vanished between the dependency check and the pipeline
+        # join. Treat as 404 to stay consistent with the rest of the resource.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found"
         ) from None
@@ -108,12 +112,15 @@ async def get_contract_pdf(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(e),
         ) from None
+    # renter_id is non-nullable with an enforced FK, so None is impossible
+    # here. Fetch the name in a cheap scalar query rather than widening the
+    # contract_pdf_service return type.
+    renter_name = await session.scalar(select(Renter.name).where(Renter.id == contract.renter_id))
+    filename = contract_pdf_service.build_contract_pdf_filename(renter_name, contract.id)
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="contract-{contract.id}.pdf"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -126,7 +133,7 @@ async def update_contract(
 ) -> ContractRead:
     try:
         updated = await contract_service.update_contract(
-            session, contract_id, payload, _contract.owner_id
+            session, contract_id, payload
         )
     except ContractRelationError as e:
         raise HTTPException(
@@ -139,7 +146,6 @@ async def update_contract(
 
 
 @router.delete("/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
-# TODO(phase future): replace physical delete with soft delete.
 async def delete_contract(
     contract_id: int,
     _contract: Contract = Depends(get_current_active_contract),

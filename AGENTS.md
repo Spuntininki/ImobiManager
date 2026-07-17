@@ -6,7 +6,7 @@ ImobiManager is a real estate rental management system. The owner (landlord) log
 
 ## Domain Model
 
-The authoritative database schema lives in `backend/db/schema.dbml`.
+The authoritative database schema lives in `backend/schema/schema.dbml`.
 
 - **User** — the logged-in account. One user can manage multiple owners.
 - **Owner** (proprietário) — the legal or business entity that owns properties.
@@ -29,11 +29,11 @@ The authoritative database schema lives in `backend/db/schema.dbml`.
 - **Default theme**: dark.
 - **Development style**: incremental and iterative. Ask before committing or moving to the next major step.
 - Keep changes minimal and focused.
-- `backend/db/schema.dbml` is the source of truth for the data model.
+- `backend/schema/schema.dbml` is the source of truth for the data model.
 - **Migrations** (Alembic): forward-only — maintain `upgrade()` only, do not rely on `downgrade()`.
 
 ## Folder Structure
 
 - `frontend/` — React/Vite frontend application.
 - `backend/` — FastAPI backend application.
-  - `backend/db/schema.dbml` — PostgreSQL database schema in DBML format.
+  - `backend/schema/schema.dbml` — PostgreSQL database schema in DBML format.

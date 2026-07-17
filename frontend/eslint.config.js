@@ -5,7 +5,9 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
-  { ignores: ["dist", "node_modules"] },
+  {
+    ignores: ["dist", "node_modules", "coverage", "vitest.config.ts"],
+  },
   js.configs.recommended,
   {
     files: ["**/*.{js,jsx}"],
@@ -45,5 +47,17 @@ export default [
     languageOptions: {
       globals: globals.node,
     },
+  },
+  {
+    files: ["**/*.{test,spec}.{js,jsx}"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.vitest },
+    },
+  },
+  // TypeScript eslint integration is pending typescript-eslint compatibility
+  // with TypeScript 7. Once available, remove this ignores block and add the
+  // typescript-eslint flat config.
+  {
+    ignores: ["**/*.ts", "**/*.tsx"],
   },
 ];
