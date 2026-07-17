@@ -1,0 +1,72 @@
+# =============================================================================
+# Postgres StatefulSet
+# -----------------------------------------------------------------------------
+# Single instance Postgres 17 with a persistent volume. Secrets (POSTGRES_*)
+# come from `postgres-secret`, which is created at runtime by ExternalSecrets
+# from Vault.
+#
+# The `imobimanager` database is created automatically via POSTGRES_DB. Alembic
+# (run by the backend entrypoint) creates/migrates all schema, so no init SQL
+# needs to run on the production Postgres.
+# =============================================================================
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: imobimanager
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              value: imobi
+            - name: POSTGRES_DB
+              value: imobimanager
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "imobi", "-d", "imobimanager"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "imobi", "-d", "imobimanager"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

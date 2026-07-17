@@ -1,0 +1,32 @@
+# =============================================================================
+# Frontend Ingress
+# -----------------------------------------------------------------------------
+# Exposed as app.sputinik.tech via Cloudflare Tunnel. See ingress-backend.yaml
+# for TLS/tunnel notes.
+# =============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: imobimanager
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: selfsigned-issuer
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - app.sputinik.tech
+      secretName: frontend-tls
+  rules:
+    - host: app.sputinik.tech
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
