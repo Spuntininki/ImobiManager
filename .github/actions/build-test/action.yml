@@ -75,40 +75,48 @@ runs:
       shell: bash
       run: docker compose build backend frontend
 
-    # ---- Lint ----
-    - name: Lint backend (ruff)
-      shell: bash
-      run: |
-        docker compose run --rm --no-deps backend \
-          uv run ruff check . && \
-        docker compose run --rm --no-deps backend \
-          uv run ruff format --check .
-
-    - name: Lint frontend (tsc + eslint)
-      shell: bash
-      run: |
-        docker compose run --rm --no-deps frontend \
-          npx tsc --noEmit && \
-        docker compose run --rm --no-deps frontend \
-          npm run lint
-
-    # ---- Test against an ephemeral Postgres (unique compose project name) ----
+    # ---- Start ephemeral Postgres before any step that may touch the DB ----
+    # Notes on `--entrypoint ""`:
+    # The backend Dockerfile dev stage runs entrypoint.sh, which executes
+    # `alembic upgrade head` unconditionally. That tries to resolve the
+    # `postgres` hostname and crashes when no DB is reachable (e.g. during
+    # lint) or double-runs migrations before pytest. `--entrypoint ""`
+    # bypasses entrypoint.sh so the supplied command (ruff / pytest / tsc)
+    # runs directly. Tests create their own schema via conftest fixtures
+    # (Base.metadata.create_all), so alembic is not needed in CI.
     - name: Start ephemeral Postgres
       shell: bash
       run: |
         # Unique project keeps the volume isolated from any stray stack.
         docker compose -p "ci-${{ github.run_id }}" up -d --wait postgres
 
+    # ---- Lint ----
+    - name: Lint backend (ruff)
+      shell: bash
+      run: |
+        docker compose run --rm --no-deps --entrypoint "" backend \
+          uv run ruff check . && \
+        docker compose run --rm --no-deps --entrypoint "" backend \
+          uv run ruff format --check .
+
+    - name: Lint frontend (tsc + eslint)
+      shell: bash
+      run: |
+        docker compose run --rm --no-deps --entrypoint "" frontend \
+          npx tsc --noEmit && \
+        docker compose run --rm --no-deps --entrypoint "" frontend \
+          npm run lint
+
     - name: Run backend tests (pytest)
       shell: bash
       run: |
-        docker compose -p "ci-${{ github.run_id }}" run --rm backend \
+        docker compose -p "ci-${{ github.run_id }}" run --rm --entrypoint "" backend \
           uv run pytest -q
 
     - name: Run frontend tests (vitest)
       shell: bash
       run: |
-        docker compose -p "ci-${{ github.run_id }}" run --rm --no-deps frontend \
+        docker compose -p "ci-${{ github.run_id }}" run --rm --no-deps --entrypoint "" frontend \
           npm run test:run
 
     - name: Teardown ephemeral stack
