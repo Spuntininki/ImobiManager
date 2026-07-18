@@ -1,7 +1,7 @@
 # =============================================================================
 # Ingress (single entry point)
 # -----------------------------------------------------------------------------
-# Exposed as imobimanager.spuntinik.tech via Cloudflare Tunnel.
+# Exposed as imobimanager.sputinik.tech via Cloudflare Tunnel.
 # The frontend Nginx proxies /api/ → backend:8000, so one ingress covering
 # the frontend service handles both the SPA and API traffic.
 # TLS terminated at the cluster by cert-manager self-signed issuer.
@@ -19,10 +19,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - imobimanager.spuntinik.tech
+        - imobimanager.sputinik.tech
       secretName: imobimanager-tls
   rules:
-    - host: imobimanager.spuntinik.tech
+    - host: imobimanager.sputinik.tech
       http:
         paths:
           - path: /

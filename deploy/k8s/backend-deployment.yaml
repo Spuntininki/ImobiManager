@@ -34,7 +34,7 @@ spec:
           env:
             # CORS allowlist for the production frontend origin (JSON array).
             - name: CORS_ORIGINS
-              value: '["https://imobimanager.spuntinik.tech"]'
+              value: '["https://imobimanager.sputinik.tech"]'
             - name: GUNICORN_WORKERS
               value: "2"
           readinessProbe:
