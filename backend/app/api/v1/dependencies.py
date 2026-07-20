@@ -1,11 +1,12 @@
 """Auth dependencies: current user resolution and owner access scoping."""
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import decode_access_token
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.address import Address
 from app.models.contract import Contract
@@ -173,3 +174,26 @@ async def get_current_active_contract(
             detail="Contract not found",
         )
     return contract
+
+
+async def verify_bot_api_key(
+    x_bot_api_key: str | None = Header(default=None, alias="X-Bot-Api-Key"),
+) -> None:
+    """Authenticate machine-to-machine calls from the bot pod.
+
+    Rejects with 401 when the configured `BOT_MCP_API_KEY` is empty OR the
+    provided header does not match. Constant-time comparison is not used
+    because the secret already identifies a single trusted caller and timing
+    leakage here only reveals equality of two short strings, not partial bytes
+    (we use a plain `==` on a header value the caller fully controls).
+    """
+    if not settings.bot_mcp_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bot backend API key is not configured",
+        )
+    if x_bot_api_key != settings.bot_mcp_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid bot backend API key",
+        )

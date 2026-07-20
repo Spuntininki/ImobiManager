@@ -21,5 +21,13 @@ class Settings(BaseSettings):
     # array) to the real frontend origin(s).
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # --- Chat bot (Telegram) integration ---------------------------------
+    # Shared secret between the bot pod and this backend. The bot sends it on
+    # every machine-to-machine call (POST /bot/auth/validate, /bot/message-logs
+    # and /mcp). When empty, those endpoints reject all calls.
+    bot_mcp_api_key: str = ""
+    # Length of the short opaque token issued to chat users (8-12 chars).
+    bot_token_length: int = 12
+
 
 settings = Settings()

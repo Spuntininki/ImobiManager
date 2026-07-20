@@ -17,6 +17,7 @@ dependencies = [
     "pydantic[email]>=2.13.4",
     "num2words==0.5.14",
     "reportlab==5.0.0",
+    "mcp>=1.28,<1.29",
 ]
 
 [dependency-groups]
