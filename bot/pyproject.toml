@@ -1,0 +1,35 @@
+[project]
+name = "imobimanager-bot"
+version = "0.1.0"
+description = "ImobiManager Telegram bot — LLM agent over the backend MCP server"
+requires-python = "==3.14.*"
+dependencies = [
+    "httpx>=0.28,<0.29",
+    "pydantic>=2.13,<3",
+    "pydantic-settings>=2.14,<3",
+    "uvloop>=0.22,<0.23",
+    "mcp>=1.28,<1.29",
+    # LangChain shows the idiomatic agent/tool/memory plumbing. Keep it
+    # restricted to app/llm so we don't leak it to infra code.
+    "langchain>=1.3,<2",
+    "langchain-openai>=1.3,<2",
+    "langchain-core>=1.4,<2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9,<10",
+    "pytest-asyncio>=1.4,<2",
+    "ruff>=0.15,<0.16",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["app/tests"]

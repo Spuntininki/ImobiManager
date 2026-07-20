@@ -11,6 +11,8 @@ frontend/.env
 frontend/.env.local
 backend/.env
 backend/.env.local
+bot/.env
+bot/.env.local
 
 # Backend
 backend/.venv
@@ -19,3 +21,9 @@ backend/.ruff_cache
 backend/.coverage
 **/__pycache__/
 *.pyc
+
+# Bot
+bot/.venv
+bot/.pytest_cache
+bot/.ruff_cache
+bot/.coverage
