@@ -25,3 +25,24 @@ class ContractStatus(enum.StrEnum):
     ACTIVE = "ACTIVE"
     EXPIRED = "EXPIRED"
     CANCELLED = "CANCELLED"
+
+
+class BotSubjectType(enum.StrEnum):
+    """Actor type a bot token represents."""
+
+    USER = "USER"
+    RENTER = "RENTER"
+
+
+class BotTokenStatus(enum.StrEnum):
+    """Lifecycle status of a bot token."""
+
+    ACTIVE = "ACTIVE"
+    REVOKED = "REVOKED"
+
+
+class MessageDirection(enum.StrEnum):
+    """Direction of a message exchanged with the chat platform."""
+
+    IN = "IN"
+    OUT = "OUT"

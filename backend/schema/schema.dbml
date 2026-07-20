@@ -128,3 +128,48 @@ Table contract_templates {
   created_at timestamp
   updated_at timestamp
 }
+
+// ---------------------------------------------------------------------------
+// Chat bot (Telegram) — token-based auth, subject-scoped access and audit log.
+// ---------------------------------------------------------------------------
+
+enum bot_subject_type {
+  USER [note: 'Logged-in account managing owners (users.id).']
+  RENTER [note: 'Tenant renting a property (renters.id).']
+}
+
+enum bot_token_status {
+  ACTIVE
+  REVOKED
+}
+
+enum message_direction {
+  IN [note: 'Message received from the chat platform.']
+  OUT [note: 'Message sent by the bot.']
+}
+
+Table bot_tokens {
+  id int [primary key]
+  token varchar [unique, note: 'Short opaque token (8-12 chars) presented to the bot for auth.']
+  subject_type bot_subject_type [not null, note: 'Actor type the token represents.']
+  subject_id int [not null, note: 'users.id or renters.id depending on subject_type (no FK — polymorphic).']
+  chat_id bigint [note: 'Platform chat id bound on /start. Null until first link.']
+  status bot_token_status [not null, note: 'ACTIVE or REVOKED.']
+  expires_at timestamp [note: 'Optional manual expiry. Null means no expiry.']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (subject_type, subject_id)
+    (chat_id)
+  }
+}
+
+Table bot_message_logs {
+  id int [primary key]
+  token_id int [ref: > bot_tokens.id, note: 'Token used in this exchange. Null for unauthenticated messages.']
+  chat_id bigint [not null, note: 'Platform chat id the message belongs to.']
+  direction message_direction [not null, note: 'Whether the message came IN or went OUT.']
+  llm_tokens_used int [note: 'LLM tokens consumed for this message (0 for rejected/no-LLM messages).']
+  created_at timestamp
+}

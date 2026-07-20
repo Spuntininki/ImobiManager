@@ -7,6 +7,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 import app.models.address  # noqa: F401 — ensures model is imported
+import app.models.bot_message_log  # noqa: F401
+import app.models.bot_token  # noqa: F401
 import app.models.contract  # noqa: F401
 import app.models.owner  # noqa: F401
 import app.models.owner_document  # noqa: F401
