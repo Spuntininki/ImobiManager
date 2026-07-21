@@ -32,7 +32,7 @@ resources:
 images:
 - name: ghcr.io/spuntininki/imobimanager-backend
   newName: ghcr.io/spuntininki/imobimanager-backend
-  newTag: sha-ea52d21
+  newTag: sha-caba105
 - name: ghcr.io/spuntininki/imobimanager-frontend
   newName: ghcr.io/spuntininki/imobimanager-frontend
-  newTag: sha-ea52d21
+  newTag: sha-caba105
