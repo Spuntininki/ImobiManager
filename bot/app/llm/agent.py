@@ -2,14 +2,14 @@
 
 The agent is built ONCE at pod startup:
 
-- `ChatOpenAI` pointed at the OpenRouter `base_url` with the choosen `model`.
+- `ChatOpenAI` pointed at the OpenRouter `base_url` with the chosen `model`.
 - Tools from `app.llm.tools` (MCP-backed, read-only).
 - System prompt assembled from `prompts/system.md` + `roles/<subject>.md` +
   `prompts/guardrails.md`.
 
 Per-message flow (handled by `AgentRunner.run`):
 
-1. The router opened an MCP `ClientSession` against `/mcp`.
+1. The router opens an MCP `ClientSession` against `/mcp`.
 2. `set_session(session)` pins it into a ContextVar the tools read from.
 3. The chat-history store replays the last N messages for the chat.
 4. `agent.ainvoke({"messages": [...]})` runs the tool-calling loop.
@@ -90,43 +90,42 @@ class AgentRunner:
         self._agent = create_agent(model=self._llm, tools=ALL_TOOLS)
         self._history = ChatHistory()
 
+    async def run(
+        self,
+        *,
+        chat_id: int,
+        user_text: str,
+        subject_type: str,
+        subject_id: int,
+    ) -> str:
+        """Open a fresh MCP session, run one turn of the agent, return reply.
 
-async def run(
-    self,
-    *,
-    chat_id: int,
-    user_text: str,
-    subject_type: str,
-    subject_id: int,
-) -> str:
-    """Open a fresh MCP session, run one turn of the agent, return reply.
+        The session lifetime is bounded to this single run; per-run closing
+        in the connected `connect()` async context manager. The agent itself
+        is reused (compiled once at startup).
+        """
+        async with connect(subject_type=subject_type, subject_id=subject_id) as session:
+            token = set_session(session)
+            try:
+                messages: list[BaseMessage] = [
+                    SystemMessage(content=build_system_prompt(subject_type)),
+                    *self._history.recent(chat_id),
+                    HumanMessage(content=user_text),
+                ]
+                result = await self._agent.ainvoke({"messages": messages})
+            finally:
+                reset_session(token)
 
-    The session lifetime is bounded to this single run; per-run closing
-    in the connected `connect()` async context manager. The agent itself
-    is reused (compiled once at startup).
-    """
-    async with connect(subject_type=subject_type, subject_id=subject_id) as session:
-        token = set_session(session)
-        try:
-            messages: list[BaseMessage] = [
-                SystemMessage(content=build_system_prompt(subject_type)),
-                *self._history.recent(chat_id),
-                HumanMessage(content=user_text),
-            ]
-            result = await self._agent.ainvoke({"messages": messages})
-        finally:
-            reset_session(token)
-
-    output_messages = result.get("messages", []) if isinstance(result, dict) else []
-    final = next(
-        (m for m in reversed(output_messages) if isinstance(m, AIMessage)),
-        None,
-    )
-    reply = (final.content if isinstance(final, AIMessage) else "").strip()
-    if not reply:
-        reply = "Não consegui gerar uma resposta agora. Tente reformular sua pergunta."
-    if len(reply) > _MAX_REPLY_CHARS:
-        reply = reply[:_MAX_REPLY_CHARS] + "…"
-    # Persist this turn into history for the next invocation.
-    self._history.extend(chat_id, [HumanMessage(content=user_text), AIMessage(content=reply)])
-    return reply
+        output_messages = result.get("messages", []) if isinstance(result, dict) else []
+        final = next(
+            (m for m in reversed(output_messages) if isinstance(m, AIMessage)),
+            None,
+        )
+        reply = (final.content if isinstance(final, AIMessage) else "").strip()
+        if not reply:
+            reply = "Não consegui gerar uma resposta agora. Tente reformular sua pergunta."
+        if len(reply) > _MAX_REPLY_CHARS:
+            reply = reply[:_MAX_REPLY_CHARS] + "…"
+        # Persist this turn into history for the next invocation.
+        self._history.extend(chat_id, [HumanMessage(content=user_text), AIMessage(content=reply)])
+        return reply
