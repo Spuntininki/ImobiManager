@@ -1,10 +1,13 @@
 # =============================================================================
 # CD — continuous deployment on main (ImobiManager)
 # -----------------------------------------------------------------------------
-# Runs on every push to main. Reuses the build-test composite, then pushes
-# the prod images to GHCR (immutable sha-<short> + moving :latest) and promotes
-# the new tag into deploy/k8s/kustomization.yaml via `kustomize edit set image`.
+# Runs on every push to main. Builds the prod images and pushes them to GHCR
+# (immutable sha-<short> + moving :latest), then promotes the new tags into
+# deploy/k8s/kustomization.yaml via `kustomize edit set image`.
 # Argo CD (homelab-infra) self-heals the new manifest → k3s rolls out.
+#
+# Lint and tests are NOT run here — they are the CI workflow's job (PR gate
+# via `.github/actions/build-test`). CD assumes the merged code already passed.
 #
 # Promotion commits to the SAME repo using the default GITHUB_TOKEN, so no
 # extra PAT or deploy key is required for CI.
@@ -27,23 +30,81 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-test-push:
-    name: build-test-push
+  build-push:
+    name: build-push
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
-      - name: Build, lint, test, push
-        id: bt
-        uses: ./.github/actions/build-test
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
         with:
-          push-images: "true"
+          driver-opts: |
+            image=moby/buildkit:latest
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Resolve short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve image tags
+        id: img
+        run: |
+          tag="sha-${{ steps.sha.outputs.short }}"
+          echo "backend=ghcr.io/spuntininki/imobimanager-backend:${tag}" >> "$GITHUB_OUTPUT"
+          echo "frontend=ghcr.io/spuntininki/imobimanager-frontend:${tag}" >> "$GITHUB_OUTPUT"
+          echo "bot=ghcr.io/spuntininki/imobimanager-bot:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push backend (prod)
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: ./backend
+          target: prod
+          push: true
+          tags: |
+            ${{ steps.img.outputs.backend }}
+            ghcr.io/spuntininki/imobimanager-backend:latest
+          cache-from: type=registry,ref=ghcr.io/spuntininki/imobimanager-backend/buildcache,mode=max
+          cache-to: type=registry,ref=ghcr.io/spuntininki/imobimanager-backend/buildcache,mode=max
+          provenance: false
+
+      - name: Build & push frontend (prod)
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: ./frontend
+          target: prod
+          push: true
+          tags: |
+            ${{ steps.img.outputs.frontend }}
+            ghcr.io/spuntininki/imobimanager-frontend:latest
+          cache-from: type=registry,ref=ghcr.io/spuntininki/imobimanager-frontend/buildcache,mode=max
+          cache-to: type=registry,ref=ghcr.io/spuntininki/imobimanager-frontend/buildcache,mode=max
+          provenance: false
+
+      - name: Build & push bot (prod)
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: ./bot
+          target: prod
+          push: true
+          tags: |
+            ${{ steps.img.outputs.bot }}
+            ghcr.io/spuntininki/imobimanager-bot:latest
+          cache-from: type=registry,ref=ghcr.io/spuntininki/imobimanager-bot/buildcache,mode=max
+          cache-to: type=registry,ref=ghcr.io/spuntininki/imobimanager-bot/buildcache,mode=max
+          provenance: false
 
   promote:
     name: promote-image-tag
     runs-on: ubuntu-latest
-    needs: build-test-push
+    needs: build-push
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
