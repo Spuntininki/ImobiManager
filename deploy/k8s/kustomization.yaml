@@ -17,6 +17,7 @@ kind: Kustomization
 
 namespace: imobimanager
 
+# Chat bot (Telegram polling, outbound-only).
 resources:
 - namespace.yaml
 - postgres-statefulset.yaml
@@ -28,7 +29,6 @@ resources:
 - frontend-deployment.yaml
 - frontend-service.yaml
 - ingress-frontend.yaml
-# Chat bot (Telegram polling, outbound-only).
 - bot-configmap.yaml
 - bot-external-secret.yaml
 - bot-deployment.yaml
@@ -36,10 +36,10 @@ resources:
 images:
 - name: ghcr.io/spuntininki/imobimanager-backend
   newName: ghcr.io/spuntininki/imobimanager-backend
-  newTag: sha-c037254
-- name: ghcr.io/spuntininki/imobimanager-frontend
-  newName: ghcr.io/spuntininki/imobimanager-frontend
-  newTag: sha-c037254
+  newTag: sha-f0d8bdd
 - name: ghcr.io/spuntininki/imobimanager-bot
   newName: ghcr.io/spuntininki/imobimanager-bot
-  newTag: latest
+  newTag: sha-f0d8bdd
+- name: ghcr.io/spuntininki/imobimanager-frontend
+  newName: ghcr.io/spuntininki/imobimanager-frontend
+  newTag: sha-f0d8bdd
