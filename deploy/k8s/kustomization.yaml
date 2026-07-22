@@ -36,10 +36,10 @@ resources:
 images:
 - name: ghcr.io/spuntininki/imobimanager-backend
   newName: ghcr.io/spuntininki/imobimanager-backend
-  newTag: sha-f0d8bdd
+  newTag: sha-bd6e503
 - name: ghcr.io/spuntininki/imobimanager-bot
   newName: ghcr.io/spuntininki/imobimanager-bot
-  newTag: sha-f0d8bdd
+  newTag: sha-bd6e503
 - name: ghcr.io/spuntininki/imobimanager-frontend
   newName: ghcr.io/spuntininki/imobimanager-frontend
-  newTag: sha-f0d8bdd
+  newTag: sha-bd6e503
