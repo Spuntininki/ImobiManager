@@ -21,7 +21,7 @@ from app.platforms.telegram.client import TelegramClient
 from app.platforms.telegram.poller import run_polling
 from app.router import MessageRouter
 from app.security.rate_limit import RateLimiter
-from app.security.token_auth import TokenAuthenticator
+from app.security.token_auth import ChatSessionStore, TokenAuthenticator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +42,7 @@ async def main() -> None:
     auth = TokenAuthenticator(http=http)
     limiter = RateLimiter()
     agent = AgentRunner()
+    sessions = ChatSessionStore()
     log_publisher = MessageLogPublisher(http=http)
     await log_publisher.start()
 
@@ -50,6 +51,7 @@ async def main() -> None:
         limiter=limiter,
         agent_runner=agent,
         log_publisher=log_publisher,
+        sessions=sessions,
     )
 
     try:

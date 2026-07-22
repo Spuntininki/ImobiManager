@@ -48,6 +48,34 @@ class ParsedCommand:
     body: str
 
 
+class ChatSessionStore:
+    """In-memory mapping of `chat_id` to the validated token for that chat.
+
+    After `/start <TOKEN>` succeeds, the bot stores the token here so the
+    user can send follow-up questions without re-prefixing the token every
+    time. On revoke/expiry (validate returns None), the router clears the
+    entry so the chat falls back to onboarding.
+
+    Limitations (documented debt):
+    - Per-pod only; multi-replica deployments need a shared store (Redis).
+    - Lost on pod restart; the user re-runs `/start`.
+    """
+
+    __slots__ = ("_sessions",)
+
+    def __init__(self) -> None:
+        self._sessions: dict[int, str] = {}
+
+    def get(self, chat_id: int) -> str | None:
+        return self._sessions.get(chat_id)
+
+    def set(self, chat_id: int, token: str) -> None:
+        self._sessions[chat_id] = token
+
+    def clear(self, chat_id: int) -> None:
+        self._sessions.pop(chat_id, None)
+
+
 def parse_message(text: str) -> ParsedCommand:
     """Split the inbound text into an optional token and the message body.
 
