@@ -71,8 +71,10 @@ jobs:
             ghcr.io/spuntininki/imobimanager-backend=ghcr.io/spuntininki/imobimanager-backend:sha-${{ steps.sha.outputs.short }}
           kustomize edit set image \
             ghcr.io/spuntininki/imobimanager-frontend=ghcr.io/spuntininki/imobimanager-frontend:sha-${{ steps.sha.outputs.short }}
+          kustomize edit set image \
+            ghcr.io/spuntininki/imobimanager-bot=ghcr.io/spuntininki/imobimanager-bot:sha-${{ steps.sha.outputs.short }}
           echo "===> kustomization.yaml images:"
-          grep -A4 'images:' kustomization.yaml
+          grep -A6 'images:' kustomization.yaml
 
       - name: Commit & push promotion
         run: |

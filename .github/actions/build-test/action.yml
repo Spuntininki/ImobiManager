@@ -17,7 +17,7 @@
 # =============================================================================
 
 name: build-test
-description: Build, lint, and test ImobiManager (backend + frontend). Optionally push prod images to GHCR.
+description: Build, lint, and test ImobiManager (backend + frontend + bot). Optionally push prod images to GHCR.
 
 inputs:
   push-images:
@@ -44,6 +44,7 @@ runs:
       run: |
         # Shared OCI cache ref per image keeps cross-run layer reuse fast.
         echo "backend-cache=type=registry,ref=ghcr.io/spuntininki/imobimanager-backend/buildcache,mode=max" >> "$GITHUB_OUTPUT"
+        echo "bot-cache=type=registry,ref=ghcr.io/spuntininki/imobimanager-bot/buildcache,mode=max" >> "$GITHUB_OUTPUT"
         echo "frontend-cache=type=registry,ref=ghcr.io/spuntininki/imobimanager-frontend/buildcache,mode=max" >> "$GITHUB_OUTPUT"
 
     - name: Login to GHCR
@@ -68,12 +69,13 @@ runs:
         DATABASE_URL=postgresql+asyncpg://imobi:imobi@postgres:5432/imobimanager
         TEST_DATABASE_URL=postgresql+asyncpg://imobi:imobi@postgres:5432/imobimanager_test
         SECRET_KEY=ci-test-secret-not-for-production
+        BOT_MCP_API_KEY=ci-test-bot-key
         VITE_API_PROXY_TARGET=http://backend:8000
         EOF
 
     - name: Build dev images (docker compose)
       shell: bash
-      run: docker compose build backend frontend
+      run: docker compose build backend bot frontend
 
     # ---- Start ephemeral Postgres before any step that may touch the DB ----
     # Notes on `--entrypoint ""`:
@@ -99,6 +101,14 @@ runs:
         docker compose run --rm --no-deps --entrypoint "" backend \
           uv run ruff format --check .
 
+    - name: Lint bot (ruff)
+      shell: bash
+      run: |
+        docker compose run --rm --no-deps --entrypoint "" bot \
+          uv run ruff check . && \
+        docker compose run --rm --no-deps --entrypoint "" bot \
+          uv run ruff format --check .
+
     - name: Lint frontend (tsc + eslint)
       shell: bash
       run: |
@@ -111,6 +121,13 @@ runs:
       shell: bash
       run: |
         docker compose -p "ci-${{ github.run_id }}" run --rm --entrypoint "" backend \
+          uv run pytest -q
+
+    - name: Run bot tests (pytest)
+      shell: bash
+      run: |
+        # Bot tests are in-memory (no DB needed); run without compose project deps.
+        docker compose run --rm --no-deps --entrypoint "" bot \
           uv run pytest -q
 
     - name: Run frontend tests (vitest)
@@ -134,6 +151,7 @@ runs:
         tag="${{ inputs.image-tag }}"
         if [ -z "$tag" ]; then tag="sha-${{ steps.sha.outputs.short }}"; fi
         echo "backend-immutable=ghcr.io/spuntininki/imobimanager-backend:${tag}" >> "$GITHUB_OUTPUT"
+        echo "bot-immutable=ghcr.io/spuntininki/imobimanager-bot:${tag}" >> "$GITHUB_OUTPUT"
         echo "frontend-immutable=ghcr.io/spuntininki/imobimanager-frontend:${tag}" >> "$GITHUB_OUTPUT"
 
     - name: Build & push backend (prod)
@@ -160,4 +178,17 @@ runs:
           ghcr.io/spuntininki/imobimanager-frontend:latest
         cache-from: ${{ steps.cache.outputs.frontend-cache }}
         cache-to: ${{ (inputs.push-images == 'true') && steps.cache.outputs.frontend-cache || '' }}
+        provenance: false
+
+    - name: Build & push bot (prod)
+      uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+      with:
+        context: ./bot
+        target: prod
+        push: ${{ inputs.push-images == 'true' }}
+        tags: |
+          ${{ steps.img.outputs.bot-immutable }}
+          ghcr.io/spuntininki/imobimanager-bot:latest
+        cache-from: ${{ steps.cache.outputs.bot-cache }}
+        cache-to: ${{ (inputs.push-images == 'true') && steps.cache.outputs.bot-cache || '' }}
         provenance: false

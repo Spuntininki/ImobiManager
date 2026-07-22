@@ -1,0 +1,30 @@
+# =============================================================================
+# Bot ConfigMap
+# -----------------------------------------------------------------------------
+# Non-secret configuration consumed by the bot pod as environment variables.
+# Secrets (TELEGRAM_BOT_TOKEN, BOT_MCP_API_KEY, OPENROUTER_API_KEY) come from
+# bot-secret, created at runtime by ExternalSecrets from Vault.
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bot-config
+  namespace: imobimanager
+data:
+  BOT_BACKEND_BASE_URL: "http://backend:8000"
+  OPENROUTER_BASE_URL: "https://openrouter.ai/api/v1"
+  OPENROUTER_MODEL: "google/gemma-4-31b-it:free"
+  # Rate limits (hard reject).
+  BOT_RATE_LIMIT_USER_PER_MIN: "10"
+  BOT_RATE_LIMIT_USER_PER_DAY: "200"
+  BOT_RATE_LIMIT_RENTER_PER_MIN: "5"
+  BOT_RATE_LIMIT_RENTER_PER_DAY: "50"
+  BOT_RATE_LIMIT_CHAT_PER_MIN: "15"
+  # Telegram long polling.
+  TELEGRAM_POLLING_TIMEOUT: "30"
+  TELEGRAM_POLLING_ERROR_BACKOFF: "5"
+  # Auth cache + log publisher.
+  BOT_VALIDATE_CACHE_TTL: "60"
+  BOT_LOG_FLUSH_INTERVAL: "30"
+  BOT_LOG_FLUSH_BATCH_SIZE: "100"
