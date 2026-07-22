@@ -1,0 +1,44 @@
+# =============================================================================
+# Bot Deployment
+# -----------------------------------------------------------------------------
+# Telegram long-polling bot (outbound-only). No Service, no Ingress, no HTTP
+# probes — the pod polls Telegram and calls the backend over the cluster
+# network. If the process dies, Kubernetes restarts the pod.
+#
+# Secrets come from `bot-secret` (ExternalSecret → Vault). Non-secret config
+# comes from `bot-config` (ConfigMap).
+#
+# Image tag is overridden by the kustomization `images` block (managed by CI).
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bot
+  namespace: imobimanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bot
+  template:
+    metadata:
+      labels:
+        app: bot
+    spec:
+      containers:
+        - name: bot
+          # Tag overridden by kustomize `images` block; placeholder here.
+          image: ghcr.io/spuntininki/imobimanager-bot:latest
+          envFrom:
+            - configMapRef:
+                name: bot-config
+            - secretRef:
+                name: bot-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

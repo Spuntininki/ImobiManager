@@ -28,6 +28,10 @@ resources:
 - frontend-deployment.yaml
 - frontend-service.yaml
 - ingress-frontend.yaml
+# Chat bot (Telegram polling, outbound-only).
+- bot-configmap.yaml
+- bot-external-secret.yaml
+- bot-deployment.yaml
 
 images:
 - name: ghcr.io/spuntininki/imobimanager-backend
@@ -36,3 +40,6 @@ images:
 - name: ghcr.io/spuntininki/imobimanager-frontend
   newName: ghcr.io/spuntininki/imobimanager-frontend
   newTag: sha-c037254
+- name: ghcr.io/spuntininki/imobimanager-bot
+  newName: ghcr.io/spuntininki/imobimanager-bot
+  newTag: latest

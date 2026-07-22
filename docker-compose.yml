@@ -61,5 +61,18 @@ services:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
 
+  bot:
+    build:
+      context: ./bot
+      target: ${BOT_TARGET:-dev}
+    container_name: imobimanager-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    volumes:
+      - ./bot/app:/app/app
+
 volumes:
   imobimanager-postgres-data:
