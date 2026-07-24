@@ -200,5 +200,5 @@ async def validate_and_bind_chat(
         await session.refresh(token)
         return token, False
     if token.chat_id != chat_id:
-        raise BotTokenNotFoundError("Invalid token")
+        raise BotTokenNotFoundError("The token is bonded with another chat")
     return token, True
