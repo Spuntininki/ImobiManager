@@ -67,12 +67,11 @@ services:
       target: ${BOT_TARGET:-dev}
     container_name: imobimanager-bot
     restart: unless-stopped
-    env_file:
-      - .env
     depends_on:
       - backend
     volumes:
       - ./bot/app:/app/app
+      - ./bot/.env:/app/.env:ro
 
 volumes:
   imobimanager-postgres-data:
